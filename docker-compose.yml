@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: aembi-play-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-aembi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aembi_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-aembi_play}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aembi} -d ${POSTGRES_DB:-aembi_play}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    # A partir de 2024/2025 a MinIO passou a publicar as imagens oficiais no
+    # Quay.io em vez do Docker Hub — ver https://min.io/docs/minio/container/index.html
+    image: quay.io/minio/minio:latest
+    container_name: aembi-play-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-aembi_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-aembi_dev_password}
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Cria o bucket padrão automaticamente ao subir o ambiente (roda uma vez e sai).
+  minio-init:
+    image: quay.io/minio/mc:latest
+    container_name: aembi-play-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-aembi_admin} ${MINIO_ROOT_PASSWORD:-aembi_dev_password} &&
+      mc mb --ignore-existing local/${MINIO_BUCKET:-aembi-ads} &&
+      exit 0
+      "
+
+volumes:
+  postgres_data:
+  minio_data:

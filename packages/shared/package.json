@@ -1,0 +1,28 @@
+{
+  "name": "@aembi-play/shared",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Contratos compartilhados (Zod) entre apps/web, apps/player e workers/media",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "type-check": "tsc --noEmit",
+    "test": "echo \"(sem testes ainda)\" && exit 0",
+    "schema:export": "tsx scripts/export-json-schema.ts"
+  },
+  "dependencies": {
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.9.0",
+    "tsx": "^4.19.0",
+    "zod-to-json-schema": "^3.24.0"
+  }
+}

@@ -1,0 +1,42 @@
+[project]
+name = "aembi-play-media-worker"
+version = "0.1.0"
+description = "Worker de processamento assíncrono do Aembi Play (validação de vídeo, backup no Drive, arquivamento, expiração de campanhas)"
+readme = "README.md"
+authors = [
+    { name = "KG Sorensen / Aembi Play" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "sqlalchemy>=2.0",
+    "psycopg[binary]>=3.2",
+    "python-dotenv>=1.0",
+    "pydantic>=2.9",
+    "google-api-python-client>=2.149",
+    "google-auth>=2.35",
+    "google-auth-oauthlib>=1.2",
+]
+
+[project.scripts]
+aembi-media-worker = "aembi_play_media_worker.worker:main"
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16",
+    "pytest>=8.3",
+    "datamodel-code-generator>=0.26",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

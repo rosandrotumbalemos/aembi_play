@@ -1,0 +1,32 @@
+{
+  "name": "@aembi-play/database",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Schema e migrations (Drizzle) — dono único do schema do PostgreSQL",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "push": "drizzle-kit push",
+    "studio": "drizzle-kit studio",
+    "build": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "type-check": "tsc --noEmit",
+    "test": "echo \"(sem testes ainda)\" && exit 0"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.38.0",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.30.0",
+    "dotenv": "^16.4.7",
+    "typescript": "^5.9.0",
+    "@types/node": "^22.10.0"
+  }
+}

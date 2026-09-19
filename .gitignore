@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+.next/
+dist/
+build/
+.turbo/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Python
+workers/media/.venv/
+workers/media/__pycache__/
+**/__pycache__/
+*.pyc
+.ruff_cache/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Docker volumes (local data)
+.docker-data/
+
+# Drizzle
+packages/database/drizzle/meta/
+
+# Misc
+*.tsbuildinfo
+.env.example.local
