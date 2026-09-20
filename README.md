@@ -95,6 +95,24 @@ uv sync
 uv run aembi-media-worker
 ```
 
+### Problemas comuns
+
+**`autenticação do tipo senha falhou` (`28P01`) ao rodar `pnpm db:migrate`, mesmo
+com a senha certa no `.env` — no Windows.** No Windows com Docker Desktop
+(WSL2), o Hyper-V às vezes reserva dinamicamente faixas de porta que colidem
+com a 5432, fazendo a conexão TCP abrir normalmente mas os dados chegarem
+corrompidos no Postgres — o sintoma parece erro de senha, mas não é. Por
+isso o `docker-compose.yml` já publica o Postgres na porta **55432** (não a
+5432 padrão) por padrão — confira se o seu `.env` também usa `55432` em
+`POSTGRES_PORT` e `DATABASE_URL` (copie de novo de `.env.example` se tiver
+um `.env` antigo). Para confirmar o diagnóstico, rode:
+
+```powershell
+netsh interface ipv4 show excludedportrange protocol=tcp
+```
+
+Se `5432` cair dentro de alguma faixa listada, é exatamente isso.
+
 ## Comandos úteis (raiz do monorepo)
 
 | Comando | Descrição |

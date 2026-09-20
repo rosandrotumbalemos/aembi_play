@@ -12,7 +12,7 @@ export const db =
   globalForDb.db ??
   createDbClient(
     process.env.DATABASE_URL ??
-      "postgresql://aembi:aembi_dev_password@localhost:5432/aembi_play",
+      "postgresql://aembi:aembi_dev_password@localhost:55432/aembi_play",
   );
 
 if (process.env.NODE_ENV !== "production") {

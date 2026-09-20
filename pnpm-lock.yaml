@@ -72,6 +72,9 @@ importers:
       cn:
         specifier: ^0.3.0
         version: 0.3.0
+      dotenv:
+        specifier: ^16.4.7
+        version: 16.6.1
       drizzle-orm:
         specifier: ^0.38.0
         version: 0.38.4(@types/react@19.3.0)(postgres@3.4.9)(react@19.2.8)
