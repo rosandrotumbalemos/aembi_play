@@ -50,6 +50,17 @@ function getCachedManifest(): PlayerManifest | null {
 }
 
 /**
+ * A Cache API exige contexto seguro (HTTPS, ou localhost) — em produção
+ * (mini PC/TV box) isso é dado, mas em dev/teste (ex.: abrindo o player de
+ * outro dispositivo por IP simples, via HTTP) `caches` nem existe no
+ * `window`. Sem ela, o player toca direto da rede a cada item: perde o
+ * cache offline, mas não trava.
+ */
+export function isCacheApiAvailable(): boolean {
+  return typeof caches !== "undefined";
+}
+
+/**
  * Baixa apenas os itens que ainda não estão no cache local, verifica o
  * hash sha256 e mantém a troca de playlist atômica (só substitui a
  * playlist ativa depois que todos os itens novos foram validados).
@@ -57,6 +68,13 @@ function getCachedManifest(): PlayerManifest | null {
 export async function syncMediaCache(
   manifest: PlayerManifest,
 ): Promise<void> {
+  if (!isCacheApiAvailable()) {
+    console.warn(
+      "[media] Cache API indisponível (contexto não é seguro/HTTPS) — tocando direto da rede, sem cache offline",
+    );
+    return;
+  }
+
   const cache = await caches.open(config.mediaCacheName);
 
   for (const item of manifest.items) {

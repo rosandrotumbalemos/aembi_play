@@ -1,6 +1,6 @@
 import "./style.css";
 import { getStoredDeviceToken, registerDevice } from "./device";
-import { fetchManifest, syncMediaCache } from "./manifest";
+import { fetchManifest, isCacheApiAvailable, syncMediaCache } from "./manifest";
 import { startHeartbeatLoop } from "./heartbeat";
 import { applyOrientation } from "./orientation";
 import { config } from "./config";
@@ -89,9 +89,14 @@ function startPlaylist(manifest: PlayerManifest): void {
     const item = manifest.items[index % manifest.items.length];
     currentAdId = item.adId;
 
-    const cache = await caches.open(config.mediaCacheName);
-    const cached = await cache.match(item.url);
-    video.src = cached ? URL.createObjectURL(await cached.blob()) : item.url;
+    video.src = item.url;
+    if (isCacheApiAvailable()) {
+      const cache = await caches.open(config.mediaCacheName);
+      const cached = await cache.match(item.url);
+      if (cached) {
+        video.src = URL.createObjectURL(await cached.blob());
+      }
+    }
 
     index += 1;
   };

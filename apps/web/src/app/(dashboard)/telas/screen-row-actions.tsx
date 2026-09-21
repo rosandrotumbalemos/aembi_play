@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { MoreHorizontal, Pencil, Unlink } from "lucide-react";
+import { ListVideo, MoreHorizontal, Pencil, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { EditScreenDialog } from "./edit-screen-dialog";
+import { ScreenPlaylistDialog } from "./screen-playlist-dialog";
 import { unpairScreen } from "./actions";
 
 type ScreenRow = {
@@ -19,8 +20,24 @@ type ScreenRow = {
   orientation: string;
 };
 
-export function ScreenRowActions({ screen }: { screen: ScreenRow }) {
+type AdOption = {
+  id: string;
+  title: string;
+  durationSeconds: number;
+  advertiserName: string | null;
+};
+
+export function ScreenRowActions({
+  screen,
+  ads,
+  currentAdIds,
+}: {
+  screen: ScreenRow;
+  ads: AdOption[];
+  currentAdIds: string[];
+}) {
   const [editOpen, setEditOpen] = useState(false);
+  const [playlistOpen, setPlaylistOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -35,6 +52,10 @@ export function ScreenRowActions({ screen }: { screen: ScreenRow }) {
           }
         />
         <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => setPlaylistOpen(true)}>
+            <ListVideo />
+            Playlist
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setEditOpen(true)}>
             <Pencil />
             Editar
@@ -50,6 +71,13 @@ export function ScreenRowActions({ screen }: { screen: ScreenRow }) {
         </DropdownMenuContent>
       </DropdownMenu>
       <EditScreenDialog screen={screen} open={editOpen} onOpenChange={setEditOpen} />
+      <ScreenPlaylistDialog
+        screen={screen}
+        ads={ads}
+        currentAdIds={currentAdIds}
+        open={playlistOpen}
+        onOpenChange={setPlaylistOpen}
+      />
     </>
   );
 }

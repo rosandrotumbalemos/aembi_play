@@ -9,8 +9,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { db } from "@/lib/db";
-import { screens } from "@aembi-play/database";
-import { desc } from "drizzle-orm";
+import { ads, advertisers, screens } from "@aembi-play/database";
+import { desc, eq, sql } from "drizzle-orm";
 import { PairScreenDialog } from "./pair-screen-dialog";
 import { ScreenRowActions } from "./screen-row-actions";
 
@@ -36,17 +36,64 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive"> = 
   offline: "destructive",
 };
 
+type PlaylistItem = { adId: string | null; durationSeconds: number; slotIndex: number };
+type AdOption = {
+  id: string;
+  title: string;
+  durationSeconds: number;
+  advertiserName: string | null;
+};
+
 async function getScreens() {
   try {
-    const rows = await db.select().from(screens).orderBy(desc(screens.createdAt));
-    return { rows, dbAvailable: true };
+    const [rows, adRows, playlistRows] = await Promise.all([
+      db.select().from(screens).orderBy(desc(screens.createdAt)),
+      db
+        .select({
+          id: ads.id,
+          title: ads.title,
+          durationSeconds: ads.durationSeconds,
+          advertiserName: advertisers.name,
+        })
+        .from(ads)
+        .leftJoin(advertisers, eq(ads.advertiserId, advertisers.id))
+        .where(eq(ads.status, "publicado")),
+      // Última playlist por tela (mesma técnica do "último job" em /anuncios).
+      db.execute<{ screen_id: string; items: PlaylistItem[] }>(sql`
+        select distinct on (screen_id) screen_id, items
+        from playlists
+        order by screen_id, generated_at desc
+      `),
+    ]);
+
+    const currentAdIdsByScreen = new Map<string, string[]>(
+      playlistRows.map((row) => [
+        row.screen_id,
+        [...row.items]
+          .sort((a, b) => a.slotIndex - b.slotIndex)
+          .map((item) => item.adId)
+          .filter((adId): adId is string => adId !== null),
+      ]),
+    );
+
+    return {
+      rows,
+      adOptions: adRows as AdOption[],
+      currentAdIdsByScreen,
+      dbAvailable: true,
+    };
   } catch {
-    return { rows: [], dbAvailable: false };
+    return {
+      rows: [],
+      adOptions: [] as AdOption[],
+      currentAdIdsByScreen: new Map<string, string[]>(),
+      dbAvailable: false,
+    };
   }
 }
 
 export default async function TelasPage() {
-  const { rows, dbAvailable } = await getScreens();
+  const { rows, adOptions, currentAdIdsByScreen, dbAvailable } = await getScreens();
 
   return (
     <div className="flex flex-1 flex-col gap-4">
@@ -121,6 +168,8 @@ export default async function TelasPage() {
                               location: screen.location,
                               orientation: screen.orientation,
                             }}
+                            ads={adOptions}
+                            currentAdIds={currentAdIdsByScreen.get(screen.id) ?? []}
                           />
                         )}
                       </TableCell>

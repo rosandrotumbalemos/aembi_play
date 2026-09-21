@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { playlists, screens } from "@aembi-play/database";
-import { eq, desc } from "drizzle-orm";
+import { ads, playlists, screens } from "@aembi-play/database";
+import { eq, desc, inArray } from "drizzle-orm";
 import { corsPreflight, withCors } from "@/lib/cors";
 
 export const OPTIONS = corsPreflight;
@@ -48,15 +48,54 @@ export async function GET(request: NextRequest) {
     return withCors(new NextResponse(null, { status: 304 }));
   }
 
-  // TODO (Fase 2): montar `items` a partir das campanhas ativas + capacidade
-  // do ciclo (seção 2.3). Por ora, o manifesto reflete o campo `items` já
-  // materializado na playlist.
+  // TODO (Fase 2): validFrom/validUntil devem vir da janela da campanha
+  // (seção 2.4) — sem campanhas ainda, cada item vale a partir de agora por
+  // um horizonte bem largo, só pra satisfazer o contrato do manifesto.
+  const adIds = playlist.items
+    .map((item) => item.adId)
+    .filter((adId): adId is string => adId !== null);
+
+  const adRows =
+    adIds.length > 0
+      ? await db.select({ id: ads.id, sha256: ads.sha256 }).from(ads).where(inArray(ads.id, adIds))
+      : [];
+  const adById = new Map(adRows.map((row) => [row.id, row]));
+
+  // `request.url` pode não refletir o host real usado pelo cliente (proxy,
+  // ou o player acessando o painel por outro IP na rede — não é sempre
+  // localhost, ver apps/player/src/config.ts). O cabeçalho Host é o que o
+  // player efetivamente discou, então é a base confiável pra montar a URL
+  // do vídeo que ele mesmo vai buscar depois.
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  const host = request.headers.get("host");
+  const origin = host
+    ? `${forwardedProto ?? "http"}://${host}`
+    : new URL(request.url).origin;
+  const validFrom = new Date();
+  const validUntil = new Date(validFrom.getTime() + 5 * 365 * 24 * 60 * 60 * 1000);
+
+  const items = playlist.items.flatMap((item) => {
+    if (item.adId === null) return [];
+    const ad = adById.get(item.adId);
+    if (!ad) return []; // anúncio removido/despublicado desde que a playlist foi salva
+    return [
+      {
+        adId: item.adId,
+        url: `${origin}/api/ads/${item.adId}/video`,
+        sha256: ad.sha256,
+        durationSeconds: item.durationSeconds,
+        validFrom: validFrom.toISOString(),
+        validUntil: validUntil.toISOString(),
+      },
+    ];
+  });
+
   const manifest = {
     version: playlist.version,
     screenId: screen.id,
     orientation: Number(screen.orientation) as 0 | 90 | 180 | 270,
     loopDurationSeconds: playlist.loopDurationSeconds,
-    items: [],
+    items,
     generatedAt: playlist.generatedAt.toISOString(),
   };
 

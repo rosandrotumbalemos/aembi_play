@@ -3,12 +3,17 @@ import { getAdObject } from "@/lib/storage";
 import { ads } from "@aembi-play/database";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { corsPreflight, withCors } from "@/lib/cors";
+
+export const OPTIONS = corsPreflight;
 
 /**
- * GET /api/ads/[id]/video — proxy autenticado do vídeo original no MinIO,
- * usado pelo preview dentro do painel (não é o manifesto do player — ver
- * seção 5 do briefing). Repassa `Range` pra permitir avançar/voltar no
- * `<video>` sem baixar o arquivo inteiro de novo.
+ * GET /api/ads/[id]/video — proxy autenticado do vídeo original no MinIO.
+ * Usado tanto pelo preview dentro do painel quanto pelo player (item.url do
+ * manifesto — seção 5), que baixa e cacheia via Cache API a partir de outra
+ * origem: precisa de CORS, senão o fetch cross-origin é rejeitado.
+ * Repassa `Range` pra permitir avançar/voltar no `<video>` sem baixar o
+ * arquivo inteiro de novo.
  */
 export async function GET(request: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -20,7 +25,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
     .limit(1);
 
   if (!ad?.storageKey) {
-    return new NextResponse(null, { status: 404 });
+    return withCors(new NextResponse(null, { status: 404 }));
   }
 
   const range = request.headers.get("range") ?? undefined;
@@ -29,7 +34,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
     const object = await getAdObject(ad.storageKey, range);
     const body = object.Body?.transformToWebStream();
     if (!body) {
-      return new NextResponse(null, { status: 404 });
+      return withCors(new NextResponse(null, { status: 404 }));
     }
 
     const headers: Record<string, string> = {
@@ -45,11 +50,11 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
 
     if (range && object.ContentRange) {
       headers["Content-Range"] = object.ContentRange;
-      return new NextResponse(body, { status: 206, headers });
+      return withCors(new NextResponse(body, { status: 206, headers }));
     }
 
-    return new NextResponse(body, { status: 200, headers });
+    return withCors(new NextResponse(body, { status: 200, headers }));
   } catch {
-    return new NextResponse(null, { status: 404 });
+    return withCors(new NextResponse(null, { status: 404 }));
   }
 }
