@@ -94,6 +94,36 @@ def sha256_of_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def generate_thumbnail(
+    input_path: Path, output_path: Path, duration_seconds: float
+) -> None:
+    """Extrai um frame do vídeo (ffmpeg) pra usar como miniatura na Biblioteca
+    (seção 9.2: "Biblioteca em grade com miniatura"). Pega o frame do meio do
+    vídeo — costuma representar melhor o conteúdo do que o primeiro frame
+    (que às vezes é uma tela preta/fade-in)."""
+    settings = get_settings()
+    timestamp = max(duration_seconds / 2, 0.0)
+    subprocess.run(
+        [
+            settings.ffmpeg_bin,
+            "-y",
+            "-ss",
+            f"{timestamp:.2f}",
+            "-i",
+            str(input_path),
+            "-frames:v",
+            "1",
+            "-vf",
+            "scale=480:-1",
+            "-q:v",
+            "4",
+            str(output_path),
+        ],
+        check=True,
+        capture_output=True,
+    )
+
+
 def transcode_to_h264_aac(input_path: Path, output_path: Path) -> None:
     """Transcodificação opcional (ffmpeg) para o formato padrão do sistema."""
     settings = get_settings()

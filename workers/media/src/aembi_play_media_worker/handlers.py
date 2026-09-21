@@ -23,8 +23,8 @@ def handle_validate_video(session: Session, payload: dict) -> None:
     import tempfile
     from pathlib import Path
 
-    from .media import probe_video, sha256_of_file, validate_upload
-    from .storage import download_ad_video
+    from .media import generate_thumbnail, probe_video, sha256_of_file, validate_upload
+    from .storage import download_ad_video, upload_ad_thumbnail
 
     ad_id = payload["adId"]
     storage_key = payload["storageKey"]
@@ -42,6 +42,19 @@ def handle_validate_video(session: Session, payload: dict) -> None:
         probe = probe_video(local_path)
         checksum = sha256_of_file(local_path)
 
+        # Miniatura (seção 9.2) — melhor esforço: se o ffmpeg falhar em
+        # extrair o frame por algum motivo, o anúncio ainda é publicado
+        # normalmente, só sem miniatura (o painel cai pro ícone genérico).
+        thumbnail_key: str | None = None
+        try:
+            thumbnail_path = Path(tmp_dir) / "thumb.jpg"
+            generate_thumbnail(local_path, thumbnail_path, probe.duration_seconds)
+            thumbnail_key = f"ads/thumbnails/{ad_id}.jpg"
+            upload_ad_thumbnail(thumbnail_path, thumbnail_key)
+        except Exception:
+            logger.exception("Falha ao gerar miniatura — ad_id=%s (seguindo sem ela)", ad_id)
+            thumbnail_key = None
+
         session.execute(
             text(
                 """
@@ -50,6 +63,7 @@ def handle_validate_video(session: Session, payload: dict) -> None:
                     video_codec = :video_codec,
                     audio_codec = :audio_codec,
                     sha256 = :sha256,
+                    thumbnail_key = :thumbnail_key,
                     status = 'publicado',
                     updated_at = :now
                 WHERE id = :ad_id
@@ -60,12 +74,18 @@ def handle_validate_video(session: Session, payload: dict) -> None:
                 "video_codec": probe.video_codec,
                 "audio_codec": probe.audio_codec,
                 "sha256": checksum,
+                "thumbnail_key": thumbnail_key,
                 "ad_id": ad_id,
                 "now": datetime.now(UTC),
             },
         )
 
-    logger.info("Anúncio validado e publicado: ad_id=%s sha256=%s", ad_id, checksum)
+    logger.info(
+        "Anúncio validado e publicado: ad_id=%s sha256=%s thumbnail=%s",
+        ad_id,
+        checksum,
+        thumbnail_key,
+    )
 
 
 def handle_backup_to_drive(session: Session, payload: dict) -> None:

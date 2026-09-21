@@ -121,6 +121,7 @@ export const ads = pgTable(
     title: text("title").notNull(),
     description: text("description"),
     storageKey: text("storage_key").notNull(), // caminho no MinIO
+    thumbnailKey: text("thumbnail_key"), // frame extraído pelo worker (ffmpeg) após validar
     driveFileId: text("drive_file_id"), // id no Google Drive (backup)
     sizeBytes: integer("size_bytes").notNull(),
     durationSeconds: integer("duration_seconds").notNull(),

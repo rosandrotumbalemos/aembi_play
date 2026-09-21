@@ -1,4 +1,4 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 /**
  * Cliente S3 apontando para o MinIO local (seção 3 do briefing — armazenamento
@@ -47,4 +47,16 @@ export async function uploadAdVideo(
       ContentType: contentType,
     }),
   );
+}
+
+/**
+ * Busca um objeto do MinIO (miniatura ou vídeo) para devolver por um Route
+ * Handler autenticado pela sessão do painel — o bucket em si não é público
+ * (mesma lógica de "players baixam sempre do servidor" da seção 7.6).
+ */
+export async function getAdObject(key: string) {
+  const result = await s3Client.send(
+    new GetObjectCommand({ Bucket: AD_BUCKET, Key: key }),
+  );
+  return result;
 }

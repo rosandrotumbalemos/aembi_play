@@ -19,6 +19,7 @@ async function getPageData() {
           status: ads.status,
           sizeBytes: ads.sizeBytes,
           durationSeconds: ads.durationSeconds,
+          thumbnailKey: ads.thumbnailKey,
           videoCodec: ads.videoCodec,
           audioCodec: ads.audioCodec,
           createdAt: ads.createdAt,
@@ -143,8 +144,19 @@ export default async function AnunciosPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {adRows.map((ad) => (
             <Card key={ad.id} className="overflow-hidden py-0">
-              <div className="flex aspect-video items-center justify-center bg-muted">
-                <FileVideo className="size-8 text-muted-foreground" />
+              <div className="flex aspect-video items-center justify-center overflow-hidden bg-muted">
+                {ad.thumbnailKey ? (
+                  // Servida por um Route Handler dinâmico (não um asset estático) — sem
+                  // domínio remoto fixo pra configurar em next.config, plain <img> é mais simples.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={`/api/ads/${ad.id}/thumbnail`}
+                    alt={ad.title}
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  <FileVideo className="size-8 text-muted-foreground" />
+                )}
               </div>
               <CardContent className="flex flex-col gap-2 p-4">
                 <div className="flex items-start justify-between gap-2">

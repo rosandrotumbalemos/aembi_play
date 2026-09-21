@@ -29,3 +29,14 @@ def download_ad_video(storage_key: str, destination: Path) -> None:
     """Baixa o objeto `storage_key` do bucket de anúncios para `destination`."""
     settings = get_settings()
     _client().download_file(settings.minio_bucket, storage_key, str(destination))
+
+
+def upload_ad_thumbnail(local_path: Path, storage_key: str) -> None:
+    """Sobe a miniatura gerada (ffmpeg) pro mesmo bucket dos vídeos."""
+    settings = get_settings()
+    _client().upload_file(
+        str(local_path),
+        settings.minio_bucket,
+        storage_key,
+        ExtraArgs={"ContentType": "image/jpeg"},
+    )
