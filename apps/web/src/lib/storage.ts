@@ -52,11 +52,13 @@ export async function uploadAdVideo(
 /**
  * Busca um objeto do MinIO (miniatura ou vídeo) para devolver por um Route
  * Handler autenticado pela sessão do painel — o bucket em si não é público
- * (mesma lógica de "players baixam sempre do servidor" da seção 7.6).
+ * (mesma lógica de "players baixam sempre do servidor" da seção 7.6). `range`
+ * repassa o cabeçalho `Range` do pedido original — necessário pro `<video>`
+ * do navegador conseguir avançar/voltar sem baixar o arquivo inteiro.
  */
-export async function getAdObject(key: string) {
+export async function getAdObject(key: string, range?: string) {
   const result = await s3Client.send(
-    new GetObjectCommand({ Bucket: AD_BUCKET, Key: key }),
+    new GetObjectCommand({ Bucket: AD_BUCKET, Key: key, Range: range }),
   );
   return result;
 }
