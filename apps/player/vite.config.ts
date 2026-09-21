@@ -35,5 +35,9 @@ export default defineConfig({
   ],
   server: {
     port: 4000,
+    // Escuta em todas as interfaces — o player normalmente é testado a
+    // partir de outro dispositivo na rede local (TV box, celular), não só
+    // localhost.
+    host: true,
   },
 });

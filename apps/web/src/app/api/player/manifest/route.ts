@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { playlists, screens } from "@aembi-play/database";
 import { eq, desc } from "drizzle-orm";
+import { corsPreflight, withCors } from "@/lib/cors";
+
+export const OPTIONS = corsPreflight;
 
 /**
  * GET /api/player/manifest — com ETag (polling), seção 5.2.
@@ -13,7 +16,7 @@ export async function GET(request: NextRequest) {
   const deviceToken = authHeader?.replace(/^Bearer\s+/i, "");
 
   if (!deviceToken) {
-    return NextResponse.json({ error: "Token de dispositivo ausente" }, { status: 401 });
+    return withCors(NextResponse.json({ error: "Token de dispositivo ausente" }, { status: 401 }));
   }
 
   const [screen] = await db
@@ -23,7 +26,7 @@ export async function GET(request: NextRequest) {
     .limit(1);
 
   if (!screen) {
-    return NextResponse.json({ error: "Dispositivo não encontrado" }, { status: 404 });
+    return withCors(NextResponse.json({ error: "Dispositivo não encontrado" }, { status: 404 }));
   }
 
   const [playlist] = await db
@@ -35,14 +38,14 @@ export async function GET(request: NextRequest) {
 
   if (!playlist) {
     // Sem playlist gerada ainda — o player deve manter o último manifesto em cache.
-    return NextResponse.json({ error: "Nenhuma playlist disponível para esta tela" }, {
-      status: 404,
-    });
+    return withCors(
+      NextResponse.json({ error: "Nenhuma playlist disponível para esta tela" }, { status: 404 }),
+    );
   }
 
   const ifNoneMatch = request.headers.get("if-none-match");
   if (ifNoneMatch === playlist.version) {
-    return new NextResponse(null, { status: 304 });
+    return withCors(new NextResponse(null, { status: 304 }));
   }
 
   // TODO (Fase 2): montar `items` a partir das campanhas ativas + capacidade
@@ -57,7 +60,9 @@ export async function GET(request: NextRequest) {
     generatedAt: playlist.generatedAt.toISOString(),
   };
 
-  return NextResponse.json(manifest, {
-    headers: { ETag: playlist.version },
-  });
+  return withCors(
+    NextResponse.json(manifest, {
+      headers: { ETag: playlist.version },
+    }),
+  );
 }

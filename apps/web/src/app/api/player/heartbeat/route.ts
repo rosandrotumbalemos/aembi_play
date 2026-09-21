@@ -3,6 +3,9 @@ import { db } from "@/lib/db";
 import { screens } from "@aembi-play/database";
 import { HeartbeatPayloadSchema } from "@aembi-play/shared";
 import { eq } from "drizzle-orm";
+import { corsPreflight, withCors } from "@/lib/cors";
+
+export const OPTIONS = corsPreflight;
 
 /**
  * POST /api/player/heartbeat — a cada 30–60s (seção 5.4).
@@ -13,12 +16,12 @@ export async function POST(request: NextRequest) {
   const deviceToken = authHeader?.replace(/^Bearer\s+/i, "");
 
   if (!deviceToken) {
-    return NextResponse.json({ error: "Token de dispositivo ausente" }, { status: 401 });
+    return withCors(NextResponse.json({ error: "Token de dispositivo ausente" }, { status: 401 }));
   }
 
   const parsed = HeartbeatPayloadSchema.safeParse(await request.json());
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    return withCors(NextResponse.json({ error: parsed.error.flatten() }, { status: 400 }));
   }
 
   const [updated] = await db
@@ -28,8 +31,8 @@ export async function POST(request: NextRequest) {
     .returning({ id: screens.id });
 
   if (!updated) {
-    return NextResponse.json({ error: "Dispositivo não encontrado" }, { status: 404 });
+    return withCors(NextResponse.json({ error: "Dispositivo não encontrado" }, { status: 404 }));
   }
 
-  return NextResponse.json({ ok: true });
+  return withCors(NextResponse.json({ ok: true }));
 }

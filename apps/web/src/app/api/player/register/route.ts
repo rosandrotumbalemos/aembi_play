@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { screens } from "@aembi-play/database";
 import { generateDeviceToken, generatePairingCode, PAIRING_CODE_TTL_MS } from "@/lib/pairing";
+import { corsPreflight, withCors } from "@/lib/cors";
+
+export const OPTIONS = corsPreflight;
 
 /**
  * POST /api/player/register — PROJECT_BRIEF.md seção 5.1.
@@ -24,10 +27,12 @@ export async function POST() {
     })
     .returning({ id: screens.id });
 
-  return NextResponse.json({
-    pairingCode,
-    deviceToken,
-    expiresAt: expiresAt.toISOString(),
-    screenId: screen?.id,
-  });
+  return withCors(
+    NextResponse.json({
+      pairingCode,
+      deviceToken,
+      expiresAt: expiresAt.toISOString(),
+      screenId: screen?.id,
+    }),
+  );
 }
