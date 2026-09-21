@@ -17,6 +17,7 @@ import {
   HeartbeatPayloadSchema,
   PlayLogBatchSchema,
   JobPayloadSchema,
+  ValidateVideoPayloadSchema,
 } from "../src/index";
 
 const outDir = resolve(import.meta.dirname, "..", "dist", "json-schema");
@@ -28,6 +29,7 @@ const schemas: Record<string, unknown> = {
   HeartbeatPayload: HeartbeatPayloadSchema,
   PlayLogBatch: PlayLogBatchSchema,
   JobPayload: JobPayloadSchema,
+  ValidateVideoPayload: ValidateVideoPayloadSchema,
 };
 
 for (const [name, schema] of Object.entries(schemas)) {

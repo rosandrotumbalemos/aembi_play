@@ -14,7 +14,21 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from .config import get_settings
 
-engine = create_engine(get_settings().database_url, pool_pre_ping=True, future=True)
+
+def _sqlalchemy_url(database_url: str) -> str:
+    """Força o driver psycopg (v3, dependência do projeto) — sem isso o
+    SQLAlchemy usa "postgresql://" como atalho pra psycopg2, que não é uma
+    dependência daqui (o .env.example do monorepo não especifica driver
+    porque quem mais lê DATABASE_URL é o `postgres` do Node, que não liga
+    pra isso)."""
+    if database_url.startswith("postgresql://"):
+        return database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return database_url
+
+
+engine = create_engine(
+    _sqlalchemy_url(get_settings().database_url), pool_pre_ping=True, future=True
+)
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False, future=True)
 
 

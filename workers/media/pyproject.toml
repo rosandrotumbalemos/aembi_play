@@ -15,6 +15,7 @@ dependencies = [
     "google-api-python-client>=2.149",
     "google-auth>=2.35",
     "google-auth-oauthlib>=1.2",
+    "boto3>=1.35",
 ]
 
 [project.scripts]

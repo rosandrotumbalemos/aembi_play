@@ -30,3 +30,20 @@ export const JobPayloadSchema = z.object({
 });
 
 export type JobPayload = z.infer<typeof JobPayloadSchema>;
+
+/**
+ * Payload do job `validate_video` — seção 2.4/7: apps/web enfileira este job
+ * logo após subir o arquivo no MinIO; o worker Python (workers/media) baixa
+ * pela `storageKey`, roda ffprobe/sha256 e publica o anúncio.
+ */
+export const ValidateVideoPayloadSchema = z.object({
+  adId: z.string().uuid(),
+  storageKey: z.string(),
+});
+
+export type ValidateVideoPayload = z.infer<typeof ValidateVideoPayloadSchema>;
+
+/** Limite de upload de anúncios (seção 2.4) — compartilhado entre cliente e servidor. */
+export const MAX_AD_UPLOAD_SIZE_MB = 30;
+export const MAX_AD_UPLOAD_SIZE_BYTES = MAX_AD_UPLOAD_SIZE_MB * 1024 * 1024;
+export const ALLOWED_AD_MIME_TYPES = ["video/mp4"] as const;
