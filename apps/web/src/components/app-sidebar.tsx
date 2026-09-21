@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -75,9 +76,16 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="px-3 py-4">
-        <span className="font-[family-name:var(--font-heading)] text-lg font-semibold tracking-tight">
-          Aembi Play
-        </span>
+        <Link href="/" className="block group-data-[collapsible=icon]:hidden">
+          <Image
+            src="/logo.png"
+            alt="Aembi Play"
+            width={236}
+            height={107}
+            priority
+            className="h-10 w-auto"
+          />
+        </Link>
       </SidebarHeader>
       <SidebarContent>
         {NAV_GROUPS.map((group) => (
