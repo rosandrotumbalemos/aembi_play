@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { screens } from "@aembi-play/database";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { generatePlaylistForScreen } from "@/lib/playlist-generator";
 
 const ORIENTATIONS = ["0", "90", "180", "270"] as const;
 type OrientationValue = (typeof ORIENTATIONS)[number];
@@ -102,4 +103,30 @@ export async function unpairScreen(id: string): Promise<void> {
 
   revalidatePath("/telas");
   revalidatePath("/");
+}
+
+export type RegeneratePlaylistState = { message: string; generated: boolean };
+
+/**
+ * Botão "Gerar playlist automaticamente" em Telas — cobre o caso em que
+ * nada mudou em Campanhas (criar/pausar/reativar já refazem a playlist na
+ * hora), mas o tempo passou e uma campanha entrou ou saiu da validade
+ * (start/end date) sozinha. Sem agendador ainda (Fase 3), isso é
+ * manual por enquanto.
+ */
+export async function regenerateScreenPlaylist(screenId: string): Promise<RegeneratePlaylistState> {
+  const result = await generatePlaylistForScreen(screenId);
+  revalidatePath("/telas");
+
+  if (!result.generated) {
+    return {
+      generated: false,
+      message: "Nenhuma campanha ativa e dentro da validade para essa tela — playlist mantida como está.",
+    };
+  }
+
+  return {
+    generated: true,
+    message: `Playlist gerada com ${result.itemCount} inserção(ões), ${result.loopDurationSeconds}s de loop.`,
+  };
 }

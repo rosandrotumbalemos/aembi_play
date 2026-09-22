@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { ads, campaignScreens, campaigns, plans } from "@aembi-play/database";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { regeneratePlaylistsForScreens } from "@/lib/playlist-generator";
 
 export type CampaignFormState = { error?: string; success?: boolean };
 
@@ -65,7 +66,12 @@ export async function createCampaign(input: CreateCampaignInput): Promise<Campai
   }
 
   const [ad] = await db
-    .select({ id: ads.id, advertiserId: ads.advertiserId, status: ads.status })
+    .select({
+      id: ads.id,
+      advertiserId: ads.advertiserId,
+      status: ads.status,
+      durationSeconds: ads.durationSeconds,
+    })
     .from(ads)
     .where(eq(ads.id, adId))
     .limit(1);
@@ -78,7 +84,7 @@ export async function createCampaign(input: CreateCampaignInput): Promise<Campai
   }
 
   const [plan] = await db
-    .select({ id: plans.id, maxScreens: plans.maxScreens })
+    .select({ id: plans.id, name: plans.name, maxScreens: plans.maxScreens, maxDurationSeconds: plans.maxDurationSeconds })
     .from(plans)
     .where(eq(plans.id, planId))
     .limit(1);
@@ -87,6 +93,11 @@ export async function createCampaign(input: CreateCampaignInput): Promise<Campai
   if (screenIds.length > plan.maxScreens) {
     return {
       error: `O plano selecionado permite no máximo ${plan.maxScreens} tela(s) — você selecionou ${screenIds.length}.`,
+    };
+  }
+  if (ad.durationSeconds > plan.maxDurationSeconds) {
+    return {
+      error: `A duração do anúncio (${ad.durationSeconds}s) excede o máximo do plano "${plan.name}" (${plan.maxDurationSeconds}s).`,
     };
   }
 
@@ -109,12 +120,31 @@ export async function createCampaign(input: CreateCampaignInput): Promise<Campai
     );
   });
 
+  // Refaz a playlist das telas afetadas já com essa campanha (seção 2.3) —
+  // se nenhuma campanha elegível existir pra alguma delas, a geração é um
+  // no-op e a playlist manual/anterior continua valendo (ver
+  // playlist-generator.ts).
+  await regeneratePlaylistsForScreens(screenIds);
+
   revalidatePath("/campanhas");
+  revalidatePath("/telas");
   return { success: true };
 }
 
 /** Ativa/desativa uma campanha sem apagar o histórico. */
 export async function setCampaignActive(id: string, active: boolean): Promise<void> {
+  const affectedScreens = await db
+    .select({ screenId: campaignScreens.screenId })
+    .from(campaignScreens)
+    .where(eq(campaignScreens.campaignId, id));
+
   await db.update(campaigns).set({ active }).where(eq(campaigns.id, id));
+
+  // Pausar tira a campanha do cálculo; reativar pode trazê-la de volta —
+  // nos dois casos a playlist da tela precisa refletir o conjunto atual de
+  // campanhas ativas.
+  await regeneratePlaylistsForScreens(affectedScreens.map((row) => row.screenId));
+
   revalidatePath("/campanhas");
+  revalidatePath("/telas");
 }

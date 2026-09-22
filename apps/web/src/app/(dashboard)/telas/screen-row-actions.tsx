@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ListVideo, MoreHorizontal, Pencil, Unlink, Wifi } from "lucide-react";
+import { ListVideo, MoreHorizontal, Pencil, RefreshCw, Unlink, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,7 +12,7 @@ import {
 import { EditScreenDialog } from "./edit-screen-dialog";
 import { ScreenPlaylistDialog } from "./screen-playlist-dialog";
 import { ScreenConnectionDialog } from "./screen-connection-dialog";
-import { unpairScreen } from "./actions";
+import { regenerateScreenPlaylist, unpairScreen } from "./actions";
 
 type ScreenRow = {
   id: string;
@@ -40,10 +40,25 @@ export function ScreenRowActions({
   const [editOpen, setEditOpen] = useState(false);
   const [playlistOpen, setPlaylistOpen] = useState(false);
   const [connectionOpen, setConnectionOpen] = useState(false);
+  const [regenerateMessage, setRegenerateMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isRegenerating, startRegenerate] = useTransition();
+
+  function handleRegenerate() {
+    startRegenerate(async () => {
+      const result = await regenerateScreenPlaylist(screen.id);
+      setRegenerateMessage(result.message);
+      setTimeout(() => setRegenerateMessage(null), 6000);
+    });
+  }
 
   return (
-    <>
+    <div className="relative inline-block">
+      {regenerateMessage && (
+        <div className="absolute top-full right-0 z-10 mt-1 w-64 rounded-md border bg-popover p-2 text-xs text-popover-foreground shadow-md">
+          {regenerateMessage}
+        </div>
+      )}
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
@@ -61,6 +76,10 @@ export function ScreenRowActions({
           <DropdownMenuItem onClick={() => setPlaylistOpen(true)}>
             <ListVideo />
             Playlist
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled={isRegenerating} onClick={handleRegenerate}>
+            <RefreshCw className={isRegenerating ? "animate-spin" : ""} />
+            Gerar playlist automaticamente
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setEditOpen(true)}>
             <Pencil />
@@ -89,6 +108,6 @@ export function ScreenRowActions({
         open={connectionOpen}
         onOpenChange={setConnectionOpen}
       />
-    </>
+    </div>
   );
 }
