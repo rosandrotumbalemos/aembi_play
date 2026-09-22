@@ -18,20 +18,12 @@ import {
 import { STATUS_LABEL, STATUS_VARIANT } from "./status";
 
 const POLL_MS = 5_000;
-const TICK_MS = 100; // granularidade do "há Xs (Yms)" abaixo de 1 min
+const TICK_MS = 1_000;
 
-/**
- * `precise` mostra os ms restantes (abaixo de 1 min) — só faz sentido pro
- * heartbeat, que é o número acompanhado ao vivo pra confirmar que chegou.
- */
-function formatElapsed(iso: string | null, precise = false): string {
+function formatElapsed(iso: string | null): string {
   if (!iso) return "nunca";
-  const totalMs = Math.max(0, Date.now() - new Date(iso).getTime());
-  const seconds = Math.floor(totalMs / 1000);
-
-  if (seconds < 60) {
-    return precise ? `há ${seconds}s (${totalMs % 1000}ms)` : `há ${seconds}s`;
-  }
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (seconds < 60) return `há ${seconds}s`;
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `há ${minutes} min`;
   return `há ${Math.floor(minutes / 60)} h`;
@@ -56,13 +48,22 @@ export function ScreenConnectionDialog({
 }) {
   const [snapshot, setSnapshot] = useState<ScreenConnectionSnapshot | null>(null);
   const [checking, setChecking] = useState(false);
+  // Latência real da última consulta (ida e volta até o server action),
+  // medida no cliente — diferente do "há Xs" acima, isto é um número de
+  // rede de verdade, não um cronômetro extrapolado.
+  const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [, forceTick] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function refresh() {
     setChecking(true);
+    const start = performance.now();
     try {
-      setSnapshot(await getScreenConnectionSnapshot(screen.id));
+      const result = await getScreenConnectionSnapshot(screen.id);
+      setLatencyMs(Math.round(performance.now() - start));
+      setSnapshot(result);
+    } catch {
+      setLatencyMs(null);
     } finally {
       setChecking(false);
     }
@@ -127,11 +128,17 @@ export function ScreenConnectionDialog({
           <dl className="grid gap-2 text-sm">
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Último heartbeat</dt>
-              <dd className="font-mono">{formatElapsed(snapshot?.lastSeenAt ?? null, true)}</dd>
+              <dd>{formatElapsed(snapshot?.lastSeenAt ?? null)}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Última playlist gerada</dt>
               <dd>{formatElapsed(snapshot?.playlistGeneratedAt ?? null)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Latência da consulta</dt>
+              <dd className="font-mono">
+                {latencyMs !== null ? `${latencyMs}ms` : "—"}
+              </dd>
             </div>
           </dl>
 
@@ -140,7 +147,9 @@ export function ScreenConnectionDialog({
             está fechada ou em segundo plano no iPhone — o player é quem
             consulta o painel, nunca o contrário. Esta tela só confirma, em
             tempo quase real, se um heartbeat chegou depois que você reabriu
-            o player.
+            o player. A "latência da consulta" é o tempo de ida e volta
+            entre este navegador e o servidor do painel — não mede a rede
+            do iPhone.
           </p>
         </div>
       </DialogContent>
