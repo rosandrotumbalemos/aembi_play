@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { updateScreen } from "./actions";
+import { ORIENTATION_LABELS } from "./orientation-labels";
 
 export function EditScreenDialog({
   screen,
@@ -78,13 +79,16 @@ export function EditScreenDialog({
             <Label htmlFor="edit-orientation">Orientação</Label>
             <Select name="orientation" defaultValue={screen.orientation}>
               <SelectTrigger id="edit-orientation" className="w-full">
-                <SelectValue />
+                {/* SelectValue não resolve o rótulo a partir dos SelectItem
+                    filhos nesta versão do Base UI (mostraria só "0", "90"
+                    etc.) — mapeamos manualmente. */}
+                <SelectValue>{(value: string | null) => ORIENTATION_LABELS[value ?? "0"]}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="0">0° — paisagem</SelectItem>
-                <SelectItem value="90">90° — retrato</SelectItem>
-                <SelectItem value="180">180° — paisagem invertida</SelectItem>
-                <SelectItem value="270">270° — retrato invertido</SelectItem>
+                <SelectItem value="0">{ORIENTATION_LABELS["0"]}</SelectItem>
+                <SelectItem value="90">{ORIENTATION_LABELS["90"]}</SelectItem>
+                <SelectItem value="180">{ORIENTATION_LABELS["180"]}</SelectItem>
+                <SelectItem value="270">{ORIENTATION_LABELS["270"]}</SelectItem>
               </SelectContent>
             </Select>
           </div>

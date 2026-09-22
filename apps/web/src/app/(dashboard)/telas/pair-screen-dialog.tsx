@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { pairScreen } from "./actions";
+import { ORIENTATION_LABELS } from "./orientation-labels";
 
 export function PairScreenDialog() {
   const [open, setOpen] = useState(false);
@@ -88,13 +89,13 @@ export function PairScreenDialog() {
             <Label htmlFor="orientation">Orientação</Label>
             <Select name="orientation" defaultValue="0">
               <SelectTrigger id="orientation" className="w-full">
-                <SelectValue />
+                <SelectValue>{(value: string | null) => ORIENTATION_LABELS[value ?? "0"]}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="0">0° — paisagem</SelectItem>
-                <SelectItem value="90">90° — retrato</SelectItem>
-                <SelectItem value="180">180° — paisagem invertida</SelectItem>
-                <SelectItem value="270">270° — retrato invertido</SelectItem>
+                <SelectItem value="0">{ORIENTATION_LABELS["0"]}</SelectItem>
+                <SelectItem value="90">{ORIENTATION_LABELS["90"]}</SelectItem>
+                <SelectItem value="180">{ORIENTATION_LABELS["180"]}</SelectItem>
+                <SelectItem value="270">{ORIENTATION_LABELS["270"]}</SelectItem>
               </SelectContent>
             </Select>
           </div>
