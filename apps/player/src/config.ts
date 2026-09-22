@@ -22,6 +22,12 @@ export const config = {
   idleRecheckIntervalMs: Number(
     import.meta.env.VITE_IDLE_RECHECK_INTERVAL_MS ?? 15_000,
   ),
+  // Proof of play (seção 5.5) é registrado localmente e enviado em lote —
+  // não precisa ser tão frequente quanto o heartbeat, já que o painel só
+  // usa isso pra relatório, não pra status em tempo real.
+  playLogFlushIntervalMs: Number(
+    import.meta.env.VITE_PLAY_LOG_FLUSH_INTERVAL_MS ?? 60_000,
+  ),
   deviceTokenStorageKey: "aembi-player:device-token",
   manifestCacheName: "aembi-player-manifest-v1",
   mediaCacheName: "aembi-player-media-v1",

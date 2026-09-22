@@ -2,6 +2,7 @@ import "./style.css";
 import { getStoredDeviceToken, registerDevice } from "./device";
 import { fetchManifest, isCacheApiAvailable, syncMediaCache } from "./manifest";
 import { startHeartbeatLoop } from "./heartbeat";
+import { recordPlay, startPlayLogFlushLoop } from "./play-log";
 import { applyOrientation } from "./orientation";
 import { config } from "./config";
 import type { PlayerManifest } from "@aembi-play/shared";
@@ -68,6 +69,7 @@ async function bootstrap(): Promise<void> {
     () => currentAdId,
     () => manifest,
   );
+  startPlayLogFlushLoop(deviceToken);
 
   await refreshManifestLoop(deviceToken);
 }
@@ -200,6 +202,29 @@ function startPlaylist(manifest: PlayerManifest): void {
         el.src = URL.createObjectURL(await cached.blob());
       }
     }
+
+    // Proof of play (seção 5.5): só registra quando o vídeo de fato começa
+    // a reproduzir (evento `playing`, não a atribuição de `src` acima, que
+    // pode falhar ao carregar) — listener de uma vez só, preso ao `src`
+    // final já decidido (rede ou cache), pra não duplicar o registro caso a
+    // troca pro blob em cache dispare `playing` de novo.
+    const screenId = manifest.screenId;
+    const manifestVersion = manifest.version;
+    const adId = item.adId;
+    const durationSeconds = item.durationSeconds;
+    el.addEventListener(
+      "playing",
+      () => {
+        recordPlay({
+          screenId,
+          adId,
+          playedAt: new Date().toISOString(),
+          durationSeconds,
+          manifestVersion,
+        });
+      },
+      { once: true },
+    );
   };
 
   void playNext();

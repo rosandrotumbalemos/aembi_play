@@ -11,6 +11,7 @@ import {
   Megaphone,
   Handshake,
   BadgePercent,
+  ListChecks,
   Clapperboard,
   FolderTree,
   History,
@@ -50,6 +51,7 @@ const NAV_GROUPS = [
     items: [
       { href: "/anunciantes", label: "Anunciantes", icon: Handshake },
       { href: "/campanhas", label: "Campanhas", icon: Megaphone },
+      { href: "/exibicoes", label: "Exibições", icon: ListChecks },
       { href: "/planos", label: "Planos", icon: BadgePercent },
     ],
   },
