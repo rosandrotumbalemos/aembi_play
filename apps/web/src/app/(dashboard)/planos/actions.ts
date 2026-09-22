@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { plans } from "@aembi-play/database";
 import { revalidatePath } from "next/cache";
+import { logAudit } from "@/lib/audit";
 
 export type PlanFormState = { error?: string; success?: boolean };
 
@@ -54,14 +55,27 @@ export async function createPlan(
     return { error: "Horário de fim inválido — use o formato HH:MM." };
   }
 
-  await db.insert(plans).values({
-    name,
-    insertionsPerCycle,
-    maxDurationSeconds,
-    maxScreens,
-    primeTimeAccess,
-    timeWindowStart: timeWindowStart || null,
-    timeWindowEnd: timeWindowEnd || null,
+  await db.transaction(async (tx) => {
+    const [plan] = await tx
+      .insert(plans)
+      .values({
+        name,
+        insertionsPerCycle,
+        maxDurationSeconds,
+        maxScreens,
+        primeTimeAccess,
+        timeWindowStart: timeWindowStart || null,
+        timeWindowEnd: timeWindowEnd || null,
+      })
+      .returning({ id: plans.id });
+
+    await logAudit(tx, {
+      action: "adicionado",
+      entity: "plans",
+      entityId: plan.id,
+      detail: `Plano "${name}" cadastrado.`,
+      after: { name, insertionsPerCycle, maxDurationSeconds, maxScreens, primeTimeAccess },
+    });
   });
 
   revalidatePath("/planos");

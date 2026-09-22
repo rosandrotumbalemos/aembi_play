@@ -5,6 +5,7 @@ import { ads, campaignScreens, campaigns, plans } from "@aembi-play/database";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { regeneratePlaylistsForScreens } from "@/lib/playlist-generator";
+import { logAudit } from "@/lib/audit";
 
 export type CampaignFormState = { error?: string; success?: boolean };
 
@@ -118,6 +119,14 @@ export async function createCampaign(input: CreateCampaignInput): Promise<Campai
     await tx.insert(campaignScreens).values(
       screenIds.map((screenId) => ({ campaignId: campaign.id, screenId })),
     );
+
+    await logAudit(tx, {
+      action: "adicionado",
+      entity: "campaigns",
+      entityId: campaign.id,
+      detail: `Campanha criada (${screenIds.length} tela(s), plano "${plan.name}").`,
+      after: { advertiserId, adId, planId, screenIds, startDate, endDate, timeWindowStart, timeWindowEnd },
+    });
   });
 
   // Refaz a playlist das telas afetadas já com essa campanha (seção 2.3) —
@@ -138,7 +147,17 @@ export async function setCampaignActive(id: string, active: boolean): Promise<vo
     .from(campaignScreens)
     .where(eq(campaignScreens.campaignId, id));
 
-  await db.update(campaigns).set({ active }).where(eq(campaigns.id, id));
+  await db.transaction(async (tx) => {
+    await tx.update(campaigns).set({ active }).where(eq(campaigns.id, id));
+
+    await logAudit(tx, {
+      action: "editado",
+      entity: "campaigns",
+      entityId: id,
+      detail: active ? "Campanha reativada." : "Campanha pausada.",
+      after: { active },
+    });
+  });
 
   // Pausar tira a campanha do cálculo; reativar pode trazê-la de volta —
   // nos dois casos a playlist da tela precisa refletir o conjunto atual de

@@ -5,6 +5,7 @@ import { screens } from "@aembi-play/database";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { generatePlaylistForScreen } from "@/lib/playlist-generator";
+import { logAudit } from "@/lib/audit";
 
 const ORIENTATIONS = ["0", "90", "180", "270"] as const;
 type OrientationValue = (typeof ORIENTATIONS)[number];
@@ -51,17 +52,27 @@ export async function pairScreen(
     };
   }
 
-  await db
-    .update(screens)
-    .set({
-      name,
-      location: location || null,
-      orientation,
-      pairedAt: new Date(),
-      pairingCode: null,
-      pairingCodeExpiresAt: null,
-    })
-    .where(eq(screens.id, screen.id));
+  await db.transaction(async (tx) => {
+    await tx
+      .update(screens)
+      .set({
+        name,
+        location: location || null,
+        orientation,
+        pairedAt: new Date(),
+        pairingCode: null,
+        pairingCodeExpiresAt: null,
+      })
+      .where(eq(screens.id, screen.id));
+
+    await logAudit(tx, {
+      action: "mudanca_status_tela",
+      entity: "screens",
+      entityId: screen.id,
+      detail: `Tela "${name}" pareada.`,
+      after: { name, location: location || null, orientation, status: "pareada" },
+    });
+  });
 
   revalidatePath("/telas");
   revalidatePath("/");
@@ -82,10 +93,27 @@ export async function updateScreen(
     return { error: "O nome da tela é obrigatório." };
   }
 
-  await db
-    .update(screens)
-    .set({ name, location: location || null, orientation })
-    .where(eq(screens.id, id));
+  await db.transaction(async (tx) => {
+    const [before] = await tx
+      .select({ name: screens.name, location: screens.location, orientation: screens.orientation })
+      .from(screens)
+      .where(eq(screens.id, id))
+      .limit(1);
+
+    await tx
+      .update(screens)
+      .set({ name, location: location || null, orientation })
+      .where(eq(screens.id, id));
+
+    await logAudit(tx, {
+      action: "editado",
+      entity: "screens",
+      entityId: id,
+      detail: `Tela "${name}" editada.`,
+      before: before ?? null,
+      after: { name, location: location || null, orientation },
+    });
+  });
 
   revalidatePath("/telas");
   return { success: true };
@@ -96,10 +124,22 @@ export async function updateScreen(
  * se registrar de novo (novo código) na próxima vez que carregar.
  */
 export async function unpairScreen(id: string): Promise<void> {
-  await db
-    .update(screens)
-    .set({ deviceToken: null, pairedAt: null, lastSeenAt: null })
-    .where(eq(screens.id, id));
+  await db.transaction(async (tx) => {
+    const [screen] = await tx.select({ name: screens.name }).from(screens).where(eq(screens.id, id)).limit(1);
+
+    await tx
+      .update(screens)
+      .set({ deviceToken: null, pairedAt: null, lastSeenAt: null })
+      .where(eq(screens.id, id));
+
+    await logAudit(tx, {
+      action: "mudanca_status_tela",
+      entity: "screens",
+      entityId: id,
+      detail: screen ? `Tela "${screen.name}" despareada.` : "Tela despareada.",
+      after: { status: "despareada" },
+    });
+  });
 
   revalidatePath("/telas");
   revalidatePath("/");

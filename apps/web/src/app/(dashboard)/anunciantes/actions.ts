@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { advertisers } from "@aembi-play/database";
 import { revalidatePath } from "next/cache";
+import { logAudit } from "@/lib/audit";
 
 export type AdvertiserFormState = { error?: string; success?: boolean };
 
@@ -21,12 +22,25 @@ export async function createAdvertiser(
     return { error: "O nome do anunciante é obrigatório." };
   }
 
-  await db.insert(advertisers).values({
-    name,
-    document: document || null,
-    email: email || null,
-    phone: phone || null,
-    notes: notes || null,
+  await db.transaction(async (tx) => {
+    const [advertiser] = await tx
+      .insert(advertisers)
+      .values({
+        name,
+        document: document || null,
+        email: email || null,
+        phone: phone || null,
+        notes: notes || null,
+      })
+      .returning({ id: advertisers.id });
+
+    await logAudit(tx, {
+      action: "adicionado",
+      entity: "advertisers",
+      entityId: advertiser.id,
+      detail: `Anunciante "${name}" cadastrado.`,
+      after: { name, document, email, phone },
+    });
   });
 
   revalidatePath("/anunciantes");
