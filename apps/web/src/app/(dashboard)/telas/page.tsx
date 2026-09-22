@@ -13,28 +13,7 @@ import { ads, advertisers, screens } from "@aembi-play/database";
 import { desc, eq, sql } from "drizzle-orm";
 import { PairScreenDialog } from "./pair-screen-dialog";
 import { ScreenRowActions } from "./screen-row-actions";
-
-const SEM_SINAL_MS = 2 * 60 * 1000; // "Sem sinal": mais de 2 min sem heartbeat (seção 2.5)
-
-function screenStatus(lastSeenAt: Date | null): "online" | "sem_sinal" | "offline" {
-  if (!lastSeenAt) return "offline";
-  const elapsed = Date.now() - lastSeenAt.getTime();
-  if (elapsed <= SEM_SINAL_MS) return "online";
-  if (elapsed <= SEM_SINAL_MS * 5) return "sem_sinal";
-  return "offline";
-}
-
-const STATUS_LABEL: Record<string, string> = {
-  online: "Online",
-  sem_sinal: "Sem sinal",
-  offline: "Offline",
-};
-
-const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive"> = {
-  online: "default",
-  sem_sinal: "secondary",
-  offline: "destructive",
-};
+import { screenStatus, STATUS_LABEL, STATUS_VARIANT } from "./status";
 
 type PlaylistItem = { adId: string | null; durationSeconds: number; slotIndex: number };
 type AdOption = {

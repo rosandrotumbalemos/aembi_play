@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ListVideo, MoreHorizontal, Pencil, Unlink } from "lucide-react";
+import { ListVideo, MoreHorizontal, Pencil, Unlink, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EditScreenDialog } from "./edit-screen-dialog";
 import { ScreenPlaylistDialog } from "./screen-playlist-dialog";
+import { ScreenConnectionDialog } from "./screen-connection-dialog";
 import { unpairScreen } from "./actions";
 
 type ScreenRow = {
@@ -38,6 +39,7 @@ export function ScreenRowActions({
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [playlistOpen, setPlaylistOpen] = useState(false);
+  const [connectionOpen, setConnectionOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -52,6 +54,10 @@ export function ScreenRowActions({
           }
         />
         <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => setConnectionOpen(true)}>
+            <Wifi />
+            Verificar conexão
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setPlaylistOpen(true)}>
             <ListVideo />
             Playlist
@@ -77,6 +83,11 @@ export function ScreenRowActions({
         currentAdIds={currentAdIds}
         open={playlistOpen}
         onOpenChange={setPlaylistOpen}
+      />
+      <ScreenConnectionDialog
+        screen={screen}
+        open={connectionOpen}
+        onOpenChange={setConnectionOpen}
       />
     </>
   );
