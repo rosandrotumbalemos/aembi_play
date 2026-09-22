@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db";
-import { ads, campaignScreens, campaigns, plans, playlists } from "@aembi-play/database";
-import { and, eq, gte, lte } from "drizzle-orm";
+import { ads, campaignScreens, campaigns, jobs, plans, playlists } from "@aembi-play/database";
+import { and, eq, gte, inArray, lte } from "drizzle-orm";
 
 export type GeneratePlaylistResult =
   | { generated: true; itemCount: number; loopDurationSeconds: number }
@@ -36,6 +36,7 @@ export async function generatePlaylistForScreen(screenId: string): Promise<Gener
       adId: ads.id,
       adDurationSeconds: ads.durationSeconds,
       adStatus: ads.status,
+      adStorageTier: ads.storageTier,
       insertionsPerCycle: plans.insertionsPerCycle,
       maxDurationSeconds: plans.maxDurationSeconds,
       campaignId: campaigns.id,
@@ -64,6 +65,17 @@ export async function generatePlaylistForScreen(screenId: string): Promise<Gener
 
   if (eligible.length === 0) {
     return { generated: false, reason: "no_eligible_campaigns" };
+  }
+
+  // Anúncio arquivado (seção 7.4/7.5) sendo reagendado — dispara a
+  // restauração do Drive pro worker Python buscar de volta antes de o
+  // player efetivamente precisar baixar o vídeo. Best-effort/assíncrono:
+  // a playlist ainda inclui o item agora (não trava a geração esperando o
+  // worker), e a restauração normalmente termina bem antes do próximo
+  // poll de manifesto do player.
+  const archivedAdIds = [...new Set(eligible.filter((row) => row.adStorageTier === "drive").map((row) => row.adId))];
+  if (archivedAdIds.length > 0) {
+    await enqueueRestoreForArchivedAds(archivedAdIds);
   }
 
   const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
@@ -124,6 +136,36 @@ export async function generatePlaylistForScreen(screenId: string): Promise<Gener
   });
 
   return { generated: true, itemCount: items.length, loopDurationSeconds };
+}
+
+/**
+ * Enfileira `restore_from_drive` (worker Python, seção 7.5) pra cada
+ * anúncio arquivado ainda sem um job pendente — dedup pra não empilhar um
+ * job por tela a cada regeneração de playlist enquanto o mesmo anúncio
+ * ainda está sendo restaurado (a restauração troca `storage_tier` de volta
+ * pra "local", o que já impede reenfileirar depois de concluído).
+ */
+async function enqueueRestoreForArchivedAds(adIds: string[]): Promise<void> {
+  const pending = await db
+    .select({ payload: jobs.payload })
+    .from(jobs)
+    .where(and(eq(jobs.type, "restore_from_drive"), inArray(jobs.status, ["pending", "processing"])));
+
+  const alreadyQueued = new Set(
+    pending
+      .map((row) => (row.payload as { adId?: string }).adId)
+      .filter((adId): adId is string => Boolean(adId)),
+  );
+
+  const toQueue = adIds.filter((adId) => !alreadyQueued.has(adId));
+  if (toQueue.length === 0) return;
+
+  await db.insert(jobs).values(
+    toQueue.map((adId) => ({
+      type: "restore_from_drive" as const,
+      payload: { adId },
+    })),
+  );
 }
 
 /** Regenera a playlist de cada tela informada (dedup automático). */

@@ -40,3 +40,40 @@ def upload_ad_thumbnail(local_path: Path, storage_key: str) -> None:
         storage_key,
         ExtraArgs={"ContentType": "image/jpeg"},
     )
+
+
+def upload_ad_video(local_path: Path, storage_key: str) -> None:
+    """Reenvia um vídeo pro MinIO na mesma `storage_key` de sempre — usado
+    pelo restore (seção 7.5): o vídeo volta pro mesmo lugar de onde saiu
+    quando foi arquivado, então nada mais no sistema (manifesto, URL de
+    download do player) precisa mudar."""
+    settings = get_settings()
+    _client().upload_file(
+        str(local_path),
+        settings.minio_bucket,
+        storage_key,
+        ExtraArgs={"ContentType": "video/mp4"},
+    )
+
+
+def delete_ad_video(storage_key: str) -> None:
+    """Remove o vídeo do MinIO local (arquivamento, seção 7.4) — só chamado
+    depois que o backup no Drive já foi confirmado (`ads.drive_file_id`
+    presente), nunca antes."""
+    settings = get_settings()
+    _client().delete_object(Bucket=settings.minio_bucket, Key=storage_key)
+
+
+def ad_video_exists(storage_key: str) -> bool:
+    """Usado pelos testes/diagnóstico pra confirmar presença/ausência do
+    objeto no MinIO sem precisar baixar o arquivo inteiro."""
+    settings = get_settings()
+    from botocore.exceptions import ClientError
+
+    try:
+        _client().head_object(Bucket=settings.minio_bucket, Key=storage_key)
+        return True
+    except ClientError as exc:
+        if exc.response.get("Error", {}).get("Code") in ("404", "NoSuchKey"):
+            return False
+        raise

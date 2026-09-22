@@ -13,6 +13,11 @@ build/
 .env.local
 .env.*.local
 
+# Credenciais do Google Drive (service account) — GOOGLE_APPLICATION_CREDENTIALS
+# aponta pra cá por padrão (ver .env.example); nunca deve ser versionado.
+credentials/
+*.service-account.json
+
 # Python
 workers/media/.venv/
 workers/media/__pycache__/

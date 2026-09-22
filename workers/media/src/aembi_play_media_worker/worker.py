@@ -9,6 +9,7 @@ from .config import get_settings
 from .db import get_session
 from .handlers import HANDLERS
 from .queue import claim_next_job, mark_completed, mark_failed
+from .scheduler import is_sweep_due, maybe_run_daily_sweep
 
 logging.basicConfig(
     level=logging.INFO,
@@ -51,6 +52,17 @@ def main() -> None:
         except Exception:
             logger.exception("Erro inesperado no loop principal")
             processed = False
+
+        # Varredura de arquivamento (seção 7.4) — no máximo uma vez por dia
+        # de calendário, sem exigir um serviço de cron separado. is_sweep_due()
+        # evita abrir uma sessão nova a cada iteração só pra descobrir que
+        # ainda não é hoje.
+        if is_sweep_due():
+            try:
+                with get_session() as session:
+                    maybe_run_daily_sweep(session)
+            except Exception:
+                logger.exception("Erro na varredura de arquivamento")
 
         if not processed:
             time.sleep(settings.worker_poll_interval_seconds)
