@@ -68,3 +68,35 @@ body,
   height: 100%;
   transform-origin: center center;
 }
+
+/* Modo de emergência (seção 5.3, controles remotos): substitui a
+   reprodução normal até um comando "resume" — cor de alerta pra ficar
+   claramente distinto da tela ociosa (neutra) e do player normal. */
+#emergency-screen {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  background: #7f1d1d;
+  color: #fff;
+  font-family: "IBM Plex Mono", monospace;
+  text-align: center;
+  padding: 2rem;
+}
+
+#emergency-screen .emergency-badge {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+#emergency-screen .emergency-message {
+  font-size: 2rem;
+  max-width: 80%;
+  line-height: 1.4;
+}

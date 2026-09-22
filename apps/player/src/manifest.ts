@@ -50,6 +50,18 @@ function getCachedManifest(): PlayerManifest | null {
 }
 
 /**
+ * Comando remoto "unpair" (seção 5.3) chama isto: sem isso, um manifesto
+ * 404 (device_token novo, ainda não pareado a nenhuma tela) cai no
+ * fallback "offline, usa o cache" de fetchManifest() e volta a mostrar o
+ * manifesto/vídeo da tela ANTERIOR, que não tem nada a ver com a
+ * identidade nova pós-pareamento.
+ */
+export function clearManifestCache(): void {
+  localStorage.removeItem(MANIFEST_ETAG_KEY);
+  localStorage.removeItem(MANIFEST_CACHE_KEY);
+}
+
+/**
  * A Cache API exige contexto seguro (HTTPS, ou localhost) — em produção
  * (mini PC/TV box) isso é dado, mas em dev/teste (ex.: abrindo o player de
  * outro dispositivo por IP simples, via HTTP) `caches` nem existe no

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { ads, advertisers, campaignScreens, campaigns, screens } from "@aembi-play/database";
-import { and, desc, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
+import { and, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
 import { PlaylistsClient, type PlaylistItem, type ScreenPlaylistData } from "./playlists-client";
 
 export type { PlaylistItem };

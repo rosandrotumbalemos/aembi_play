@@ -65,6 +65,19 @@ export const auditActionEnum = pgEnum("audit_action", [
   "mudanca_status_tela",
 ]);
 
+// Comandos remotos "de um tiro" (seção 5.3/10 — controles remotos das
+// telas). "emergency_screen" fica de fora: não é enfileirado aqui, é
+// derivado direto de screens.emergency_mode/emergency_message a cada
+// consulta (ver apps/web/src/lib/commands.ts) — precisa ser reafirmado a
+// cada reconexão do player, não só entregue uma vez.
+export const commandTypeEnum = pgEnum("command_type", [
+  "reload",
+  "pause",
+  "resume",
+  "force_update",
+  "unpair",
+]);
+
 // ─────────────────────────────────────────────────────────────────────────
 // users
 // ─────────────────────────────────────────────────────────────────────────
@@ -155,7 +168,11 @@ export const screens = pgTable(
     pairingCodeExpiresAt: timestamp("pairing_code_expires_at", { withTimezone: true }),
     pairedAt: timestamp("paired_at", { withTimezone: true }),
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+    // Modo de emergência (seção 5.3/10) é estado durável, não um comando de
+    // um tiro: precisa sobreviver a reconexão/reload do player, então mora
+    // aqui em vez de só na fila screen_commands (ver commandTypeEnum acima).
     emergencyMode: boolean("emergency_mode").notNull().default(false),
+    emergencyMessage: text("emergency_message"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -331,6 +348,30 @@ export const playLogs = pgTable(
 );
 
 // ─────────────────────────────────────────────────────────────────────────
+// screen_commands — controles remotos das telas, um tiro só (seção 5.3/10)
+// Entregue via SSE (com fallback de polling); "deliveredAt" nulo = ainda
+// pendente, sobrevive a uma tela offline até ela reconectar (ver
+// apps/web/src/lib/commands.ts).
+// ─────────────────────────────────────────────────────────────────────────
+
+export const screenCommands = pgTable(
+  "screen_commands",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    screenId: uuid("screen_id")
+      .notNull()
+      .references(() => screens.id, { onDelete: "cascade" }),
+    type: commandTypeEnum("type").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("screen_commands_screen_id_idx").on(table.screenId),
+    index("screen_commands_pending_idx").on(table.screenId, table.deliveredAt),
+  ],
+);
+
+// ─────────────────────────────────────────────────────────────────────────
 // jobs — fila compartilhada TS/Python (seção 3.1 / 6)
 // Consumida com `SELECT ... FOR UPDATE SKIP LOCKED` pelo worker Python.
 // ─────────────────────────────────────────────────────────────────────────
@@ -378,6 +419,11 @@ export const screensRelations = relations(screens, ({ many }) => ({
   campaignScreens: many(campaignScreens),
   playlists: many(playlists),
   playLogs: many(playLogs),
+  commands: many(screenCommands),
+}));
+
+export const screenCommandsRelations = relations(screenCommands, ({ one }) => ({
+  screen: one(screens, { fields: [screenCommands.screenId], references: [screens.id] }),
 }));
 
 export const campaignsRelations = relations(campaigns, ({ one, many }) => ({

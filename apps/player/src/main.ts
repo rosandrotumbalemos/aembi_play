@@ -1,8 +1,9 @@
 import "./style.css";
 import { getStoredDeviceToken, registerDevice } from "./device";
-import { fetchManifest, isCacheApiAvailable, syncMediaCache } from "./manifest";
+import { clearManifestCache, fetchManifest, isCacheApiAvailable, syncMediaCache } from "./manifest";
 import { startHeartbeatLoop } from "./heartbeat";
 import { recordPlay, startPlayLogFlushLoop } from "./play-log";
+import { startCommandLoop, type PlayerCommandHandlers } from "./commands";
 import { applyOrientation } from "./orientation";
 import { config } from "./config";
 import type { PlayerManifest } from "@aembi-play/shared";
@@ -20,6 +21,33 @@ let currentAdId: string | null = null;
 // cancelado, senão dois timers concorrentes ficam disputando a troca de
 // tela ociosa → vídeo.
 let idleRecheckTimer: number | undefined;
+
+// Controles remotos (seção 5.3) — estado lido por playNext() (early return)
+// e mexido pelos handlers de comando registrados em bootstrap(). "pause" e
+// "emergency" são independentes: emergência sempre vence visualmente
+// (renderiza por cima), mas os dois impedem o avanço automático da
+// playlist enquanto ativos.
+let isPaused = false;
+let isEmergency = false;
+let emergencyMessage: string | undefined;
+
+// playNext "atual" — startPlaylist() é chamado de novo a cada troca de
+// versão do manifesto, recriando o closure com um novo `playNext`; os
+// handlers de comando (registrados uma vez só, em bootstrap) precisam
+// sempre chamar a versão mais recente, não a de quando foram criados.
+let currentPlayNext: (() => Promise<void>) | null = null;
+
+// Reconsulta imediata do manifesto (comando "force_update"), sem esperar
+// o próximo ciclo de config.manifestPollIntervalMs — ver refreshManifestLoop.
+let forcePoll: (() => Promise<void>) | null = null;
+
+// Mesma ideia de currentPlayNext: recriado a cada startPlaylist(). Preciso
+// disto (em vez do handler de comando chamar renderEmergencyScreen direto)
+// porque entrar em emergência troca o app.innerHTML por baixo do `video`
+// que o closure de startPlaylist guarda — sem zerar essa referência aqui
+// (como enterIdle já faz), ensureVideoElement() acha que o <video> ainda
+// existe e nunca re-renderiza o player ao sair da emergência.
+let currentEnterEmergency: ((message?: string) => void) | null = null;
 
 /**
  * Um item do manifesto só é exibido se: (1) agora está dentro de
@@ -70,8 +98,80 @@ async function bootstrap(): Promise<void> {
     () => manifest,
   );
   startPlayLogFlushLoop(deviceToken);
+  startCommandLoop(deviceToken, buildCommandHandlers());
 
   await refreshManifestLoop(deviceToken);
+}
+
+/**
+ * Handlers dos comandos remotos (seção 5.3) — registrados uma vez só, em
+ * bootstrap(). Usam as referências mutáveis `currentPlayNext`/`forcePoll`
+ * em vez de fechar sobre uma versão específica, porque startPlaylist() e
+ * refreshManifestLoop() recriam seus closures internos a cada troca de
+ * manifesto/versão.
+ */
+function buildCommandHandlers(): PlayerCommandHandlers {
+  return {
+    onReload: () => {
+      window.location.reload();
+    },
+    onPause: () => {
+      isPaused = true;
+      document.querySelector<HTMLVideoElement>("#player-video")?.pause();
+    },
+    onResume: () => {
+      const wasEmergency = isEmergency;
+      isPaused = false;
+      isEmergency = false;
+      emergencyMessage = undefined;
+
+      if (wasEmergency) {
+        // Estava em emergência (sem vídeo montado) — reavalia do zero.
+        void currentPlayNext?.();
+        return;
+      }
+
+      const video = document.querySelector<HTMLVideoElement>("#player-video");
+      if (video) {
+        void video.play();
+      } else {
+        void currentPlayNext?.();
+      }
+    },
+    onForceUpdate: () => {
+      void forcePoll?.();
+    },
+    onEmergencyState: (message) => {
+      // Reafirmado a cada tick/poll enquanto ativo (ver commands.ts) —
+      // idempotente: só re-renderiza se de fato mudou algo.
+      if (isEmergency && emergencyMessage === message) return;
+      isPaused = false;
+      isEmergency = true;
+      emergencyMessage = message;
+      if (currentEnterEmergency) {
+        currentEnterEmergency(message);
+      } else {
+        // Antes do primeiro manifesto/startPlaylist (raríssimo — exigiria
+        // emergência ativada antes do player nem ter pareado). isEmergency
+        // já está true, então playNext() vai no-op assim que rodar.
+        renderEmergencyScreen(message);
+      }
+    },
+    onUnpair: () => {
+      localStorage.removeItem(config.deviceTokenStorageKey);
+      // Sem isto, um manifesto 404 (device_token novo, ainda não pareado)
+      // cai no fallback "offline, usa cache" de fetchManifest() e volta a
+      // mostrar o manifesto/vídeo da tela ANTERIOR — visto na prática
+      // neste projeto.
+      clearManifestCache();
+      // reload() logo em seguida do removeItem() na mesma tarefa síncrona
+      // corre risco de navegar antes da escrita no localStorage terminar
+      // de persistir (visto na prática neste projeto) — o token "removido"
+      // reaparecia depois do reload. Um setTimeout(0) empurra o reload pra
+      // depois da escrita ser assentada.
+      setTimeout(() => window.location.reload(), 0);
+    },
+  };
 }
 
 /** Tela de pareamento — apenas o código, grande e centralizado (seção 9.2). */
@@ -110,6 +210,26 @@ function renderIdleScreen(): void {
   `;
 }
 
+/**
+ * Tela de emergência (seção 5.3): substitui a reprodução normal até um
+ * comando "resume" chegar. A mensagem vem do painel (texto livre digitado
+ * pelo operador) — escapada antes de entrar no innerHTML.
+ */
+function renderEmergencyScreen(message?: string): void {
+  app.innerHTML = `
+    <div id="emergency-screen">
+      <div class="emergency-badge">Aviso</div>
+      <div class="emergency-message">${escapeHtml(message?.trim() || "Conteúdo temporariamente indisponível.")}</div>
+    </div>
+  `;
+}
+
+function escapeHtml(value: string): string {
+  const div = document.createElement("div");
+  div.textContent = value;
+  return div.innerHTML;
+}
+
 async function refreshManifestLoop(deviceToken: string): Promise<void> {
   const poll = async () => {
     const next = await fetchManifest(deviceToken);
@@ -122,6 +242,10 @@ async function refreshManifestLoop(deviceToken: string): Promise<void> {
       }
     }
   };
+
+  // Comando remoto "force_update" (seção 5.3) chama isto pra reconsultar
+  // na hora, sem esperar config.manifestPollIntervalMs.
+  forcePoll = poll;
 
   await poll();
   setInterval(() => void poll(), config.manifestPollIntervalMs);
@@ -152,6 +276,24 @@ function startPlaylist(manifest: PlayerManifest): void {
     }
   };
 
+  /**
+   * Chamado pelo handler de comando "emergency_screen" (ver
+   * buildCommandHandlers, em main.ts) via currentEnterEmergency — zera
+   * `video` (igual enterIdle) pra que ensureVideoElement() recrie o
+   * elemento de vídeo do zero quando o "resume" sair da emergência, em vez
+   * de reusar a referência de um <video> que app.innerHTML já descartou.
+   */
+  const enterEmergency = (message?: string) => {
+    currentAdId = null;
+    video = null;
+    if (idleRecheckTimer !== undefined) {
+      window.clearInterval(idleRecheckTimer);
+      idleRecheckTimer = undefined;
+    }
+    renderEmergencyScreen(message);
+  };
+  currentEnterEmergency = enterEmergency;
+
   const ensureVideoElement = (): HTMLVideoElement => {
     if (!video) {
       const rendered = renderPlayer();
@@ -164,6 +306,11 @@ function startPlaylist(manifest: PlayerManifest): void {
   };
 
   const playNext = async () => {
+    // Pausado ou em emergência (seção 5.3, comandos remotos): não avança a
+    // playlist sozinho. Sai desses estados só via comando "resume", que
+    // chama currentPlayNext() de volta explicitamente.
+    if (isPaused || isEmergency) return;
+
     if (manifest.items.length === 0) {
       enterIdle();
       return;
@@ -227,6 +374,7 @@ function startPlaylist(manifest: PlayerManifest): void {
     );
   };
 
+  currentPlayNext = playNext;
   void playNext();
 }
 

@@ -10,6 +10,8 @@ export type ScreenConnectionSnapshot = {
   lastSeenAt: string | null;
   playlistVersion: string | null;
   playlistGeneratedAt: string | null;
+  emergencyMode: boolean;
+  emergencyMessage: string | null;
 };
 
 /**
@@ -28,7 +30,15 @@ export async function getScreenConnectionSnapshot(
   screenId: string,
 ): Promise<ScreenConnectionSnapshot> {
   const [[screen], [playlist]] = await Promise.all([
-    db.select({ lastSeenAt: screens.lastSeenAt }).from(screens).where(eq(screens.id, screenId)).limit(1),
+    db
+      .select({
+        lastSeenAt: screens.lastSeenAt,
+        emergencyMode: screens.emergencyMode,
+        emergencyMessage: screens.emergencyMessage,
+      })
+      .from(screens)
+      .where(eq(screens.id, screenId))
+      .limit(1),
     db
       .select({ version: playlists.version, generatedAt: playlists.generatedAt })
       .from(playlists)
@@ -42,5 +52,7 @@ export async function getScreenConnectionSnapshot(
     lastSeenAt: screen?.lastSeenAt ? screen.lastSeenAt.toISOString() : null,
     playlistVersion: playlist?.version ?? null,
     playlistGeneratedAt: playlist?.generatedAt ? playlist.generatedAt.toISOString() : null,
+    emergencyMode: screen?.emergencyMode ?? false,
+    emergencyMessage: screen?.emergencyMessage ?? null,
   };
 }

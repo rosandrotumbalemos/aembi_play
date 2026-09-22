@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { AlertTriangle, DownloadCloud, Pause, Play, PowerOff, RefreshCw, RotateCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,7 @@ import {
   getScreenConnectionSnapshot,
   type ScreenConnectionSnapshot,
 } from "./connection-actions";
+import { enterEmergencyMode, sendForceUpdate, sendPause, sendReload, sendResume } from "./commands-actions";
 import { STATUS_LABEL, STATUS_VARIANT } from "./status";
 
 const POLL_MS = 5_000;
@@ -54,6 +56,9 @@ export function ScreenConnectionDialog({
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [, forceTick] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [isSending, startSending] = useTransition();
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [emergencyMessage, setEmergencyMessage] = useState("");
 
   async function refresh() {
     setChecking(true);
@@ -69,13 +74,29 @@ export function ScreenConnectionDialog({
     }
   }
 
+  function runCommand(label: string, action: () => Promise<void>) {
+    startSending(async () => {
+      try {
+        await action();
+        setActionMessage(`${label} — comando enfileirado.`);
+      } catch {
+        setActionMessage(`Falha ao enviar "${label}". Tente de novo.`);
+      }
+      void refresh();
+      setTimeout(() => setActionMessage(null), 5000);
+    });
+  }
+
   useEffect(() => {
     if (!open) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       return;
     }
 
-    void refresh();
+    // Disparado como callback (não chamado direto no corpo do efeito) só
+    // pra satisfazer a regra react-hooks/set-state-in-effect — o
+    // comportamento é o mesmo (fetch assim que o diálogo abre).
+    void Promise.resolve().then(refresh);
     intervalRef.current = setInterval(() => void refresh(), POLL_MS);
     // Reflete o "há Xs" no relógio entre um poll e outro, sem esperar o
     // próximo fetch pra atualizar o texto na tela.
@@ -142,12 +163,113 @@ export function ScreenConnectionDialog({
             </div>
           </dl>
 
+          <div className="grid gap-2 rounded-lg border p-4">
+            <div className="text-sm text-muted-foreground">Controle remoto</div>
+
+            {snapshot?.emergencyMode ? (
+              <div className="flex items-start justify-between gap-3 rounded-md border border-destructive/40 bg-destructive/5 p-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 size-4 text-destructive" />
+                  <div>
+                    <div className="text-sm font-medium">Modo de emergência ativo</div>
+                    {snapshot.emergencyMessage && (
+                      <div className="text-xs text-muted-foreground">
+                        &ldquo;{snapshot.emergencyMessage}&rdquo;
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isSending}
+                  onClick={() => runCommand("Sair da emergência", () => sendResume(screen.id))}
+                >
+                  <Play />
+                  Sair
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Mensagem opcional exibida na tela…"
+                  value={emergencyMessage}
+                  onChange={(e) => setEmergencyMessage(e.target.value)}
+                  className="h-9"
+                />
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="shrink-0"
+                  disabled={isSending}
+                  onClick={() =>
+                    runCommand("Modo de emergência", async () => {
+                      await enterEmergencyMode(screen.id, emergencyMessage);
+                      setEmergencyMessage("");
+                    })
+                  }
+                >
+                  <AlertTriangle />
+                  Emergência
+                </Button>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isSending}
+                onClick={() => runCommand("Recarregar", () => sendReload(screen.id))}
+              >
+                <RotateCw />
+                Recarregar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isSending}
+                onClick={() => runCommand("Pausar", () => sendPause(screen.id))}
+              >
+                <Pause />
+                Pausar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isSending}
+                onClick={() => runCommand("Retomar", () => sendResume(screen.id))}
+              >
+                <Play />
+                Retomar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isSending}
+                onClick={() => runCommand("Forçar atualização", () => sendForceUpdate(screen.id))}
+              >
+                <DownloadCloud />
+                Forçar atualização
+              </Button>
+            </div>
+
+            {actionMessage && <div className="text-xs text-muted-foreground">{actionMessage}</div>}
+
+            <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+              <PowerOff className="mt-0.5 size-3 shrink-0" />
+              Só chega numa tela com o player aberto e conectado (SSE, com
+              polling como reserva) — numa tela offline, o comando fica
+              guardado e é entregue assim que ela reconectar.
+            </p>
+          </div>
+
           <p className="text-xs text-muted-foreground">
-            O sistema não consegue "ligar" o player remotamente quando a aba
+            O sistema não consegue &ldquo;ligar&rdquo; o player remotamente quando a aba
             está fechada ou em segundo plano no iPhone — o player é quem
             consulta o painel, nunca o contrário. Esta tela só confirma, em
             tempo quase real, se um heartbeat chegou depois que você reabriu
-            o player. A "latência da consulta" é o tempo de ida e volta
+            o player. A &ldquo;latência da consulta&rdquo; é o tempo de ida e volta
             entre este navegador e o servidor do painel — não mede a rede
             do iPhone.
           </p>

@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { db } from "@/lib/db";
 import { advertisers, ads, plans, screens } from "@aembi-play/database";
-import { desc, eq, isNotNull } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 import { NewCampaignDialog } from "./new-campaign-dialog";
 import { CampaignRowActions } from "./campaign-row-actions";
 

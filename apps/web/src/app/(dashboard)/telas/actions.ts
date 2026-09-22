@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { screens } from "@aembi-play/database";
+import { screenCommands, screens } from "@aembi-play/database";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { generatePlaylistForScreen } from "@/lib/playlist-generator";
@@ -122,6 +122,12 @@ export async function updateScreen(
 /**
  * Despareia a tela (seção 2.2): revoga o device_token, forçando o player a
  * se registrar de novo (novo código) na próxima vez que carregar.
+ *
+ * Também enfileira o comando remoto "unpair" (seção 5.3) — se o player
+ * ainda estiver com a aba aberta e conectado, ele limpa o token local e
+ * recarrega na hora, em vez de só descobrir na próxima chamada que levaria
+ * 401 (manifesto/heartbeat). O comando é lido por screenId, então continua
+ * entregável mesmo depois do device_token já ter sido zerado acima.
  */
 export async function unpairScreen(id: string): Promise<void> {
   await db.transaction(async (tx) => {
@@ -131,6 +137,8 @@ export async function unpairScreen(id: string): Promise<void> {
       .update(screens)
       .set({ deviceToken: null, pairedAt: null, lastSeenAt: null })
       .where(eq(screens.id, id));
+
+    await tx.insert(screenCommands).values({ screenId: id, type: "unpair" });
 
     await logAudit(tx, {
       action: "mudanca_status_tela",

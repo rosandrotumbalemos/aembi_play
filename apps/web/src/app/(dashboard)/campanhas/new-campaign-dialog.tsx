@@ -228,7 +228,7 @@ export function NewCampaignDialog({
             </div>
             {selectedPlan && screenIds.length > selectedPlan.maxScreens && (
               <p className="text-xs text-destructive">
-                O plano "{selectedPlan.name}" permite no máximo {selectedPlan.maxScreens}{" "}
+                O plano &ldquo;{selectedPlan.name}&rdquo; permite no máximo {selectedPlan.maxScreens}{" "}
                 tela(s).
               </p>
             )}

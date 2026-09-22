@@ -28,6 +28,13 @@ export const config = {
   playLogFlushIntervalMs: Number(
     import.meta.env.VITE_PLAY_LOG_FLUSH_INTERVAL_MS ?? 60_000,
   ),
+  // Controles remotos (seção 5.3): canal principal é SSE
+  // (/api/player/commands/stream); isto só é usado como fallback quando o
+  // SSE não consegue conectar (proxy bloqueando streaming, TV box com
+  // EventSource capenga etc.) — ver apps/player/src/commands.ts.
+  commandPollIntervalMs: Number(
+    import.meta.env.VITE_COMMAND_POLL_INTERVAL_MS ?? 15_000,
+  ),
   deviceTokenStorageKey: "aembi-player:device-token",
   manifestCacheName: "aembi-player-manifest-v1",
   mediaCacheName: "aembi-player-media-v1",
