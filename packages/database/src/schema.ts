@@ -246,12 +246,27 @@ export const playlists = pgTable(
     // Espaços do ciclo já montados e intercalados (ver seção 2.3), na ordem
     // de reprodução. Cada item referencia um ad_id; slots vazios recebem
     // conteúdo institucional.
+    //
+    // Campos de agendamento (Fase 3, seção 2.2/2.4/10) são opcionais e
+    // populados apenas pela geração automática (playlist-generator.ts), a
+    // partir da campanha de origem de cada item: campaignId identifica a
+    // campanha; validFrom/validUntil vêm de campaigns.startDate/endDate;
+    // dailyWindowStart/End e daysOfWeek vêm de
+    // campaigns.timeWindowStart/End/daysOfWeek. Itens de playlist manual
+    // (editados em /playlists, sem campanha por trás) não têm esses campos
+    // — o manifesto trata a ausência como "sempre válido".
     items: jsonb("items")
       .$type<
         Array<{
           adId: string | null;
           durationSeconds: number;
           slotIndex: number;
+          campaignId?: string;
+          validFrom?: string; // ISO 8601
+          validUntil?: string; // ISO 8601
+          dailyWindowStart?: string; // "HH:MM"
+          dailyWindowEnd?: string; // "HH:MM"
+          daysOfWeek?: number[]; // 0=domingo .. 6=sábado
         }>
       >()
       .notNull()

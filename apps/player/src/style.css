@@ -46,6 +46,21 @@ body,
   opacity: 0.7;
 }
 
+/* Tela ociosa: nenhum item do manifesto elegível agora (fora de todas as
+   faixas de horário/dia da semana, ver main.ts). */
+#idle-screen {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 1.1rem;
+  text-align: center;
+  padding: 2rem;
+}
+
 /* Container de rotação — a orientação da tela (0/90/180/270) é aplicada
    via transform, invertendo largura/altura em 90/270 (ver docs seção 5.6). */
 #rotation-container {

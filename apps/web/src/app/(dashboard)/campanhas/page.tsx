@@ -78,6 +78,27 @@ function formatDate(date: Date): string {
   return new Date(date).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 
+const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+/** Resumo do agendamento fino (Fase 3) abaixo da validade — só aparece
+ * quando difere do padrão "todo dia, o dia inteiro". */
+function formatSchedule(campaign: {
+  timeWindowStart: string | null;
+  timeWindowEnd: string | null;
+  daysOfWeek: number[];
+}): string | null {
+  const parts: string[] = [];
+  if (campaign.timeWindowStart && campaign.timeWindowEnd) {
+    parts.push(`${campaign.timeWindowStart}–${campaign.timeWindowEnd}`);
+  }
+  if (campaign.daysOfWeek.length > 0 && campaign.daysOfWeek.length < 7) {
+    parts.push(
+      [...campaign.daysOfWeek].sort((a, b) => a - b).map((day) => DAY_LABELS[day]).join("/"),
+    );
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
 export default async function CampanhasPage() {
   const { campaigns, advertisers, ads, plans, screens, dbAvailable } =
     await getCampaignsPageData();
@@ -135,7 +156,12 @@ export default async function CampanhasPage() {
                       {campaign.campaignScreens.map((cs) => cs.screen.name).join(", ") || "—"}
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-xs">
-                      {formatDate(campaign.startDate)} – {formatDate(campaign.endDate)}
+                      <div>
+                        {formatDate(campaign.startDate)} – {formatDate(campaign.endDate)}
+                      </div>
+                      {formatSchedule(campaign) && (
+                        <div className="text-muted-foreground">{formatSchedule(campaign)}</div>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant={campaign.active ? "default" : "secondary"}>

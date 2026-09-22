@@ -48,9 +48,6 @@ export async function GET(request: NextRequest) {
     return withCors(new NextResponse(null, { status: 304 }));
   }
 
-  // TODO (Fase 2): validFrom/validUntil devem vir da janela da campanha
-  // (seção 2.4) — sem campanhas ainda, cada item vale a partir de agora por
-  // um horizonte bem largo, só pra satisfazer o contrato do manifesto.
   const adIds = playlist.items
     .map((item) => item.adId)
     .filter((adId): adId is string => adId !== null);
@@ -71,8 +68,13 @@ export async function GET(request: NextRequest) {
   const origin = host
     ? `${forwardedProto ?? "http"}://${host}`
     : new URL(request.url).origin;
-  const validFrom = new Date();
-  const validUntil = new Date(validFrom.getTime() + 5 * 365 * 24 * 60 * 60 * 1000);
+
+  // Itens de playlist manual (sem campanha por trás, ver
+  // playlist-generator.ts) não carregam validFrom/validUntil — nesse caso
+  // valem a partir de agora por um horizonte bem largo, só pra satisfazer o
+  // contrato do manifesto (ManifestItemSchema exige os dois campos).
+  const fallbackValidFrom = new Date();
+  const fallbackValidUntil = new Date(fallbackValidFrom.getTime() + 5 * 365 * 24 * 60 * 60 * 1000);
 
   const items = playlist.items.flatMap((item) => {
     if (item.adId === null) return [];
@@ -84,8 +86,11 @@ export async function GET(request: NextRequest) {
         url: `${origin}/api/ads/${item.adId}/video`,
         sha256: ad.sha256,
         durationSeconds: item.durationSeconds,
-        validFrom: validFrom.toISOString(),
-        validUntil: validUntil.toISOString(),
+        validFrom: item.validFrom ?? fallbackValidFrom.toISOString(),
+        validUntil: item.validUntil ?? fallbackValidUntil.toISOString(),
+        dailyWindowStart: item.dailyWindowStart,
+        dailyWindowEnd: item.dailyWindowEnd,
+        daysOfWeek: item.daysOfWeek,
       },
     ];
   });

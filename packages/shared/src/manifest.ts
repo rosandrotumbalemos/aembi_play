@@ -13,6 +13,22 @@ export const ManifestItemSchema = z.object({
   /** Janela de validade do item (ver seção 2.4). */
   validFrom: z.string().datetime(),
   validUntil: z.string().datetime(),
+  /**
+   * Agendamento fino (Fase 3, seção 2.2/2.4/10): faixa de horário diária
+   * ("HH:MM", ambos presentes ou ambos ausentes) e dias da semana em que o
+   * item pode ser exibido (0=domingo .. 6=sábado). Ausentes = sem restrição
+   * além de validFrom/validUntil (ex.: itens de playlist manual, sem
+   * campanha por trás).
+   */
+  dailyWindowStart: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):([0-5]\d)$/)
+    .optional(),
+  dailyWindowEnd: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):([0-5]\d)$/)
+    .optional(),
+  daysOfWeek: z.array(z.number().int().min(0).max(6)).optional(),
 });
 
 export type ManifestItem = z.infer<typeof ManifestItemSchema>;

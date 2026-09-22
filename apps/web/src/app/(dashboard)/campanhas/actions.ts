@@ -20,14 +20,16 @@ export type CreateCampaignInput = {
   endDate: string; // yyyy-mm-dd
   timeWindowStart: string; // "" quando não usado
   timeWindowEnd: string;
+  daysOfWeek: number[]; // 0=domingo .. 6=sábado
 };
 
 /**
  * Cria uma campanha (seção 2.1/2.2) — vincula anunciante + anúncio + plano a
- * um conjunto de telas, com validade (start/end) e faixa de horário diária
- * opcional (dias da semana ficam no padrão "todos", ver campaigns.daysOfWeek
- * — agendamento fino por dia é Fase 3). A geração automática de playlist
- * (próxima etapa) lê as campanhas ativas de cada tela pra montar o loop.
+ * um conjunto de telas, com validade (start/end), faixa de horário diária
+ * opcional e dias da semana (Fase 3: agendamento avançado, seção 2.2/10). A
+ * geração automática de playlist lê as campanhas ativas de cada tela pra
+ * montar o loop, e o manifesto repassa essa janela pro player decidir o que
+ * exibir a cada instante (packages/shared/src/manifest.ts).
  */
 export async function createCampaign(input: CreateCampaignInput): Promise<CampaignFormState> {
   const {
@@ -39,6 +41,7 @@ export async function createCampaign(input: CreateCampaignInput): Promise<Campai
     endDate,
     timeWindowStart,
     timeWindowEnd,
+    daysOfWeek,
   } = input;
 
   if (!advertiserId) return { error: "Selecione o anunciante." };
@@ -46,6 +49,11 @@ export async function createCampaign(input: CreateCampaignInput): Promise<Campai
   if (!planId) return { error: "Selecione o plano." };
   if (screenIds.length === 0) return { error: "Selecione ao menos uma tela." };
   if (!startDate || !endDate) return { error: "Informe as datas de início e fim." };
+
+  const uniqueDays = [...new Set(daysOfWeek)];
+  if (uniqueDays.length === 0 || uniqueDays.some((day) => !Number.isInteger(day) || day < 0 || day > 6)) {
+    return { error: "Selecione ao menos um dia da semana." };
+  }
 
   const start = new Date(`${startDate}T00:00:00Z`);
   const end = new Date(`${endDate}T23:59:59Z`);
@@ -113,6 +121,7 @@ export async function createCampaign(input: CreateCampaignInput): Promise<Campai
         endDate: end,
         timeWindowStart: timeWindowStart || null,
         timeWindowEnd: timeWindowEnd || null,
+        daysOfWeek: uniqueDays,
       })
       .returning({ id: campaigns.id });
 
@@ -125,7 +134,17 @@ export async function createCampaign(input: CreateCampaignInput): Promise<Campai
       entity: "campaigns",
       entityId: campaign.id,
       detail: `Campanha criada (${screenIds.length} tela(s), plano "${plan.name}").`,
-      after: { advertiserId, adId, planId, screenIds, startDate, endDate, timeWindowStart, timeWindowEnd },
+      after: {
+        advertiserId,
+        adId,
+        planId,
+        screenIds,
+        startDate,
+        endDate,
+        timeWindowStart,
+        timeWindowEnd,
+        daysOfWeek: uniqueDays,
+      },
     });
   });
 

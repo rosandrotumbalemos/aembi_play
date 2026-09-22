@@ -30,6 +30,9 @@ type AdOption = { id: string; title: string; advertiserId: string; durationSecon
 type Plan = { id: string; name: string; maxScreens: number };
 type ScreenOption = { id: string; name: string; location: string | null };
 
+const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
 export function NewCampaignDialog({
   advertisers,
   ads,
@@ -50,6 +53,7 @@ export function NewCampaignDialog({
   const [endDate, setEndDate] = useState("");
   const [timeWindowStart, setTimeWindowStart] = useState("");
   const [timeWindowEnd, setTimeWindowEnd] = useState("");
+  const [daysOfWeek, setDaysOfWeek] = useState<number[]>(ALL_DAYS);
   const [error, setError] = useState<string | undefined>();
   const [isPending, startTransition] = useTransition();
 
@@ -68,11 +72,18 @@ export function NewCampaignDialog({
     setEndDate("");
     setTimeWindowStart("");
     setTimeWindowEnd("");
+    setDaysOfWeek(ALL_DAYS);
     setError(undefined);
   }
 
   function toggleScreen(screenId: string, checked: boolean) {
     setScreenIds((prev) => (checked ? [...prev, screenId] : prev.filter((id) => id !== screenId)));
+  }
+
+  function toggleDay(day: number, checked: boolean) {
+    setDaysOfWeek((prev) =>
+      checked ? [...prev, day].sort((a, b) => a - b) : prev.filter((d) => d !== day),
+    );
   }
 
   function handleSubmit() {
@@ -87,6 +98,7 @@ export function NewCampaignDialog({
         endDate,
         timeWindowStart,
         timeWindowEnd,
+        daysOfWeek,
       });
       if (result.error) {
         setError(result.error);
@@ -267,6 +279,24 @@ export function NewCampaignDialog({
           </div>
 
           <div className="grid gap-2">
+            <Label>Dias da semana *</Label>
+            <div className="flex flex-wrap gap-3">
+              {DAY_LABELS.map((label, day) => (
+                <label key={day} className="flex cursor-pointer items-center gap-1.5 text-sm">
+                  <Checkbox
+                    checked={daysOfWeek.includes(day)}
+                    onCheckedChange={(value) => toggleDay(day, value === true)}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+            {daysOfWeek.length === 0 && (
+              <p className="text-xs text-destructive">Selecione ao menos um dia.</p>
+            )}
+          </div>
+
+          <div className="grid gap-2">
             <Label>Plano *</Label>
             <Select value={planId} onValueChange={(value) => setPlanId(value ?? "")}>
               <SelectTrigger className="w-full">
@@ -297,7 +327,7 @@ export function NewCampaignDialog({
 
         <DialogFooter>
           <DialogClose render={<Button type="button" variant="outline" />}>Cancelar</DialogClose>
-          <Button type="button" onClick={handleSubmit} disabled={isPending}>
+          <Button type="button" onClick={handleSubmit} disabled={isPending || daysOfWeek.length === 0}>
             {isPending ? "Salvando..." : "Criar campanha"}
           </Button>
         </DialogFooter>

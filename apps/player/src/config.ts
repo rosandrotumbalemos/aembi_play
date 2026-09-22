@@ -15,6 +15,13 @@ export const config = {
   heartbeatIntervalMs: Number(
     import.meta.env.VITE_HEARTBEAT_INTERVAL_MS ?? 45_000,
   ),
+  // Quando nenhum item do manifesto está elegível agora (fora da faixa de
+  // horário/dia da semana de todas as campanhas, ver main.ts), o player
+  // fica em tela ociosa e tenta de novo nesse intervalo — não precisa ser
+  // curto, já que a granularidade útil é de minutos (faixas em "HH:MM").
+  idleRecheckIntervalMs: Number(
+    import.meta.env.VITE_IDLE_RECHECK_INTERVAL_MS ?? 15_000,
+  ),
   deviceTokenStorageKey: "aembi-player:device-token",
   manifestCacheName: "aembi-player-manifest-v1",
   mediaCacheName: "aembi-player-media-v1",
