@@ -50,5 +50,6 @@ export async function setScreenPlaylist(
   });
 
   revalidatePath("/telas");
+  revalidatePath("/playlists");
   return { success: true };
 }

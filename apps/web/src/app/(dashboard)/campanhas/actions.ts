@@ -137,6 +137,7 @@ export async function createCampaign(input: CreateCampaignInput): Promise<Campai
 
   revalidatePath("/campanhas");
   revalidatePath("/telas");
+  revalidatePath("/playlists");
   return { success: true };
 }
 
@@ -166,4 +167,5 @@ export async function setCampaignActive(id: string, active: boolean): Promise<vo
 
   revalidatePath("/campanhas");
   revalidatePath("/telas");
+  revalidatePath("/playlists");
 }

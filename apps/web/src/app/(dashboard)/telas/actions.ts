@@ -157,6 +157,7 @@ export type RegeneratePlaylistState = { message: string; generated: boolean };
 export async function regenerateScreenPlaylist(screenId: string): Promise<RegeneratePlaylistState> {
   const result = await generatePlaylistForScreen(screenId);
   revalidatePath("/telas");
+  revalidatePath("/playlists");
 
   if (!result.generated) {
     return {
