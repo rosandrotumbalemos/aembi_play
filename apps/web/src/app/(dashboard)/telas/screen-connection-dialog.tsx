@@ -18,11 +18,20 @@ import {
 import { STATUS_LABEL, STATUS_VARIANT } from "./status";
 
 const POLL_MS = 5_000;
+const TICK_MS = 100; // granularidade do "há Xs (Yms)" abaixo de 1 min
 
-function formatElapsed(iso: string | null): string {
+/**
+ * `precise` mostra os ms restantes (abaixo de 1 min) — só faz sentido pro
+ * heartbeat, que é o número acompanhado ao vivo pra confirmar que chegou.
+ */
+function formatElapsed(iso: string | null, precise = false): string {
   if (!iso) return "nunca";
-  const seconds = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
-  if (seconds < 60) return `há ${seconds}s`;
+  const totalMs = Math.max(0, Date.now() - new Date(iso).getTime());
+  const seconds = Math.floor(totalMs / 1000);
+
+  if (seconds < 60) {
+    return precise ? `há ${seconds}s (${totalMs % 1000}ms)` : `há ${seconds}s`;
+  }
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `há ${minutes} min`;
   return `há ${Math.floor(minutes / 60)} h`;
@@ -69,7 +78,7 @@ export function ScreenConnectionDialog({
     intervalRef.current = setInterval(() => void refresh(), POLL_MS);
     // Reflete o "há Xs" no relógio entre um poll e outro, sem esperar o
     // próximo fetch pra atualizar o texto na tela.
-    const tick = setInterval(() => forceTick((n) => n + 1), 1_000);
+    const tick = setInterval(() => forceTick((n) => n + 1), TICK_MS);
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -118,7 +127,7 @@ export function ScreenConnectionDialog({
           <dl className="grid gap-2 text-sm">
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Último heartbeat</dt>
-              <dd>{formatElapsed(snapshot?.lastSeenAt ?? null)}</dd>
+              <dd className="font-mono">{formatElapsed(snapshot?.lastSeenAt ?? null, true)}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Última playlist gerada</dt>
