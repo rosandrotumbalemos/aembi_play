@@ -38,7 +38,7 @@ No painel, isso é um assistente em etapas com resumo ao lado. Ao confirmar, o s
 
 ### 2.3 Ciclo e planos
 
-- Cada tela repete um **ciclo** (loop). Referência inicial: **5 minutos, dividido em espaços de 15 segundos = 20 espaços por ciclo.**
+- Cada tela repete um **ciclo** (loop) de **3 minutos, dividido em espaços de 15 segundos = 12 espaços por ciclo** (definido na Fase 0; ainda pode mudar).
 - Vídeo de 15 s ocupa 1 espaço; de 30 s ocupa 2.
 - O **plano** define: inserções por ciclo, duração máxima do vídeo, quantidade de telas, faixa de horário (horário nobre opcional) e período.
 - Exemplo de planos (valores ilustrativos, a definir):
@@ -80,7 +80,7 @@ No painel, isso é um assistente em etapas com resumo ao lado. Ao confirmar, o s
 | Fila de jobs | Tabela `jobs` no PostgreSQL com `SELECT ... FOR UPDATE SKIP LOCKED` (ou Procrastinate no lado Python) |
 | Armazenamento local | MinIO (compatível com S3), cota de 1 GB |
 | Nuvem / backup | Google Drive API (Shared Drive + OAuth Workspace ou service account) |
-| Provisionamento de players | PowerShell (mini PCs Windows) |
+| Provisionamento de players | PowerShell (mini PCs Windows); TV Box Android — provisionamento ainda não construído (backlog, Fase 3) |
 | Infra | Docker / docker-compose; produção em VPS (a definir) |
 
 ### 3.1 Integração TypeScript ↔ Python
@@ -187,15 +187,18 @@ Drive: usar Shared Drive (service accounts não têm cota própria) e upload res
 - Detalhe da tela com prévia da orientação.
 - Player sem interface: fundo preto + vídeo; apenas a tela de pareamento com código grande.
 
-### 9.3 Linguagem visual (provisória, até definir a identidade)
+### 9.3 Linguagem visual (definida na Fase 0)
 
-- Base neutra quente, barra lateral escura, uma cor de destaque (padrão `#4338CA`).
-- Tipografia: Space Grotesk (títulos), IBM Plex Sans (texto), IBM Plex Mono (dados técnicos: horários, códigos, tamanhos).
-- Grade de espaçamento de 8 px; modo escuro opcional.
+- Base escura com **glassmorphism**: fundo quase-preto, painéis em vidro fosco (`backdrop-filter: blur`), navbar superior fixa com blur — no lugar da barra lateral clara original.
+- **Navbar no topo, estilo Netflix** (substitui a barra lateral): logo à esquerda, links de navegação com indicador no item ativo, busca/notificações/avatar à direita.
+- Cor de destaque: violeta `#7C6CFF` (ações e marca), coral `#FF8A5B` como contraponto pontual na marca; verde/âmbar/vermelho reservados para status (online/alerta/offline).
+- Tipografia: Geist (títulos e texto), Geist Mono (dados técnicos: horários, códigos, tamanhos, código de pareamento).
+- Mais hierarquia visual e transições animadas entre telas. Direção fechada; ainda cabe polimento fino nos componentes.
 
 ### 9.4 Referência visual
 
-https://claude.ai/artifact/CLKTk2hZM5L9JuBy4M7SaN — Dashboard, Biblioteca, Telas, Nova campanha, Histórico, Player (pareamento) e componente da barra lateral.
+- **Atual (Fase 0):** https://claude.ai/artifact/9mWoYCooJwY2Giazjb2ZBq — Dashboard, Telas, Anúncios, Campanhas, tela de pareamento do player e guia de estilo (cores, tipografia, componentes).
+- Referência original da Fase 1 (substituída): https://claude.ai/artifact/CLKTk2hZM5L9JuBy4M7SaN
 
 ---
 
@@ -203,10 +206,10 @@ https://claude.ai/artifact/CLKTk2hZM5L9JuBy4M7SaN — Dashboard, Biblioteca, Tel
 
 ### Fase 0 — Definições
 - [x] Nome da plataforma: Aembi Play
-- [ ] Identidade visual (logo, cores, tipografia)
-- [ ] Regras finais dos planos e tamanho do ciclo
-- [ ] Hardware das telas (TV box Android ou mini PC)
-- [ ] Perfis de acesso (só administradores ou também anunciantes)
+- [x] Identidade visual (logo, cores, tipografia) — ver seção 9.3/9.4; polimento fino ainda em aberto
+- [x] Tamanho do ciclo: 3 min / 12 espaços de 15 s (ver seção 2.3); preços finais dos planos ainda pendentes
+- [x] Hardware das telas: mini PC Windows (já provisionado) **e** TV Box Android (provisionamento ainda não construído — ver Fase 3)
+- [x] Perfis de acesso: administradores **e** anunciantes (portal do anunciante — ver Fase 2)
 
 ### Fase 1 — Núcleo
 - [ ] Monorepo (pnpm/Turborepo) + docker-compose (PostgreSQL, MinIO)
@@ -221,13 +224,15 @@ https://claude.ai/artifact/CLKTk2hZM5L9JuBy4M7SaN — Dashboard, Biblioteca, Tel
 - [ ] Anunciantes, planos, campanhas com validade
 - [ ] Geração automática de playlist + controle de capacidade
 - [ ] Log de auditoria
+- [ ] Portal do anunciante: login próprio, relatório de exibições restrito às campanhas do anunciante (decidido na Fase 0)
 
 ### Fase 3 — Automação e nuvem
 - [ ] Agendamento avançado por faixa horária
 - [ ] Backup e arquivamento no Google Drive
 - [ ] Relatório de exibições
 - [ ] Controles remotos das telas
-- [ ] Script PowerShell de provisionamento
+- [ ] Script PowerShell de provisionamento (mini PC Windows)
+- [ ] Provisionamento/kiosk para TV Box Android (decidido na Fase 0; app-wrapper ou navegador em modo kiosk — formato a definir)
 
 ### Produção (depois)
 - [ ] Deploy em VPS com Docker
@@ -249,9 +254,9 @@ https://claude.ai/artifact/CLKTk2hZM5L9JuBy4M7SaN — Dashboard, Biblioteca, Tel
 
 ## 12. Decisões em aberto
 
-- Logo, cores e tipografia definitivos (nome definido: Aembi Play)
-- Preços e regras finais dos planos; tamanho do ciclo
-- Hardware padrão das telas
-- Portal do anunciante (acesso próprio a relatórios) — sim ou não
+- Preços finais dos planos (estrutura de inserções/duração/telas já travada — seção 2.3)
 - Provedor da VPS de produção
 - Conta Google Workspace para o Drive
+- Formato exato do provisionamento/kiosk em TV Box Android (Fase 3)
+
+> Resolvido na Fase 0 (2026-09-23): identidade visual, tamanho do ciclo, hardware (mini PC Windows + TV Box Android) e perfis de acesso (admin + portal do anunciante). Ver seção 10.
