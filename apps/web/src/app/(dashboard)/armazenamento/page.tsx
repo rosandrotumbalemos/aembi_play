@@ -36,12 +36,12 @@ const JOB_STATUS_LABEL: Record<string, string> = {
   failed: "Falhou",
 };
 
-// Mesma paleta de 3 cores usada em telas/status.ts e histórico/labels.ts:
-// default = bom, secondary = neutro/em andamento, destructive = precisa de atenção.
-const JOB_STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive"> = {
-  pending: "secondary",
-  processing: "secondary",
-  completed: "default",
+// Mesma paleta usada em telas/status.ts: success = bom, warning = em
+// andamento/atenção leve, destructive = precisa de atenção.
+const JOB_STATUS_VARIANT: Record<string, "success" | "warning" | "destructive"> = {
+  pending: "warning",
+  processing: "warning",
+  completed: "success",
   failed: "destructive",
 };
 
@@ -290,7 +290,7 @@ export default async function ArmazenamentoPage() {
             <CardContent className="flex flex-col gap-2 text-sm">
               {data.lastCompletedBackup ? (
                 <p>
-                  <Badge variant="default">Concluído</Badge>{" "}
+                  <Badge variant="success">Concluído</Badge>{" "}
                   <span className="font-medium">{data.lastCompletedBackup.adTitle ?? "Anúncio"}</span>{" "}
                   <span className="text-muted-foreground">
                     em {formatDateTime(data.lastCompletedBackup.updatedAt)}

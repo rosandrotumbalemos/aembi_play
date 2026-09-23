@@ -19,8 +19,8 @@ export const STATUS_LABEL: Record<ScreenStatus, string> = {
   offline: "Offline",
 };
 
-export const STATUS_VARIANT: Record<ScreenStatus, "default" | "secondary" | "destructive"> = {
-  online: "default",
-  sem_sinal: "secondary",
+export const STATUS_VARIANT: Record<ScreenStatus, "success" | "warning" | "destructive"> = {
+  online: "success",
+  sem_sinal: "warning",
   offline: "destructive",
 };

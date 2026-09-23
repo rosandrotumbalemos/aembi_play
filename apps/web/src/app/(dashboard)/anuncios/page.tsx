@@ -79,13 +79,13 @@ function formatSize(bytes: number) {
 
 function statusBadge(status: string, job: JobInfo | undefined) {
   if (status === "publicado") {
-    return <Badge>Publicado</Badge>;
+    return <Badge variant="success">Publicado</Badge>;
   }
   if (status === "arquivado") {
     return <Badge variant="secondary">Arquivado</Badge>;
   }
   if (status === "agendado") {
-    return <Badge variant="secondary">Agendado</Badge>;
+    return <Badge variant="warning">Agendado</Badge>;
   }
   // "rascunho" — o que aparece depende do job de validação (assíncrono).
   if (job?.status === "failed") {
@@ -96,9 +96,9 @@ function statusBadge(status: string, job: JobInfo | undefined) {
     );
   }
   if (job?.status === "pending" || job?.status === "processing") {
-    return <Badge variant="secondary">Verificando...</Badge>;
+    return <Badge variant="warning">Verificando...</Badge>;
   }
-  return <Badge variant="secondary">Aguardando validação</Badge>;
+  return <Badge variant="warning">Aguardando validação</Badge>;
 }
 
 export default async function AnunciosPage() {

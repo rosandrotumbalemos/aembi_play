@@ -27,6 +27,8 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -48,6 +50,13 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/*
+ * Paleta clara original (shadcn init) — mantida sem uso ativo: o painel roda
+ * sempre em modo escuro (identidade visual definida na Fase 0, PROJECT_BRIEF.md
+ * seção 9.3), então "dark" é fixado no <html> em layout.tsx e o bloco .dark
+ * abaixo é quem realmente vale. Ficou aqui só como base para um eventual
+ * modo claro opcional no futuro.
+ */
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -64,6 +73,8 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
+  --success: oklch(0.6 0.16 155);
+  --warning: oklch(0.75 0.15 85);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -72,7 +83,7 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  --radius: 0.875rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -83,38 +94,47 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
+/*
+ * Tema escuro com glassmorphism — identidade visual da Fase 0.
+ * Superfícies translúcidas (cards, popovers) + backdrop-blur nos componentes
+ * (ver card.tsx e dropdown-menu.tsx) sobre um fundo quase-preto com um brilho
+ * radial sutil (ver body, abaixo). Um único acento (violeta) para ações e
+ * marca; verde/âmbar/vermelho reservados para status.
+ */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #08090b;
+  --foreground: #f2f2f4;
+  --card: rgba(255, 255, 255, 0.035);
+  --card-foreground: #f2f2f4;
+  --popover: rgba(13, 14, 18, 0.92);
+  --popover-foreground: #f2f2f4;
+  --primary: #7c6cff;
+  --primary-foreground: #08090b;
+  --secondary: rgba(255, 255, 255, 0.07);
+  --secondary-foreground: #f2f2f4;
+  --muted: rgba(255, 255, 255, 0.045);
+  --muted-foreground: #8a8c99;
+  --accent: rgba(124, 108, 255, 0.14);
+  --accent-foreground: #f2f2f4;
+  --destructive: #ff5c72;
+  --success: #3ecf8e;
+  --warning: #ffc857;
+  --border: rgba(255, 255, 255, 0.09);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: rgba(124, 108, 255, 0.5);
+  --chart-1: #7c6cff;
+  --chart-2: #ff8a5b;
+  --chart-3: #3ecf8e;
+  --chart-4: #ffc857;
+  --chart-5: #54566a;
+  --sidebar: #0c0d10;
+  --sidebar-foreground: #f2f2f4;
+  --sidebar-primary: #7c6cff;
+  --sidebar-primary-foreground: #08090b;
+  --sidebar-accent: rgba(255, 255, 255, 0.06);
+  --sidebar-accent-foreground: #f2f2f4;
+  --sidebar-border: rgba(255, 255, 255, 0.09);
+  --sidebar-ring: rgba(124, 108, 255, 0.5);
 }
 
 @layer base {
@@ -123,6 +143,14 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image: radial-gradient(
+        1100px 560px at 50% -12%,
+        rgba(124, 108, 255, 0.1),
+        transparent 60%
+      ),
+      radial-gradient(800px 480px at 100% 0%, rgba(255, 138, 91, 0.05), transparent 55%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
   }
   html {
     @apply font-sans;

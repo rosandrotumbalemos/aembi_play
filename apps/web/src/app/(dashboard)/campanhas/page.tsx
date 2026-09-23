@@ -164,7 +164,7 @@ export default async function CampanhasPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={campaign.active ? "default" : "secondary"}>
+                      <Badge variant={campaign.active ? "success" : "secondary"}>
                         {campaign.active ? "Ativa" : "Pausada"}
                       </Badge>
                     </TableCell>

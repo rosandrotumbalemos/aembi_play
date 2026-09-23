@@ -21,12 +21,12 @@ export const AUDIT_ENTITY_LABELS: Record<AuditEntity, string> = {
 
 export const AUDIT_ACTION_BADGE_VARIANT: Record<
   AuditAction,
-  "default" | "secondary" | "destructive"
+  "success" | "warning" | "destructive" | "secondary"
 > = {
-  adicionado: "default",
-  editado: "secondary",
+  adicionado: "success",
+  editado: "warning",
   removido: "destructive",
-  publicado: "default",
+  publicado: "success",
   arquivado: "secondary",
   expirado: "destructive",
   backup: "secondary",
