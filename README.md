@@ -87,7 +87,19 @@ Ao abrir, o player chama `POST /api/player/register` e mostra um código de
 pareamento; a vinculação a uma tela existente pelo painel ainda será
 implementada na Fase 2.
 
-### 8. Suba o worker (workers/media)
+### 8. Suba o site institucional (apps/site)
+
+```bash
+pnpm --filter @aembi-play/site dev
+# http://localhost:3100
+```
+
+Site de apresentação (página inicial, quem somos, como funciona e contato)
+com um botão "Entrar" que leva a uma tela de login própria antes de mandar
+o usuário para o painel de verdade (`NEXT_PUBLIC_PAINEL_URL`, apps/web).
+Roda numa porta separada (3100) para não conflitar com o painel.
+
+### 9. Suba o worker (workers/media)
 
 ```bash
 cd workers/media

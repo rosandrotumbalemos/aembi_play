@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+/*
+ * Site institucional — identidade visual estática (sem glass, sem blur, sem
+ * gradientes decorativos e sem animações de hover; ver docs/PROJECT_BRIEF.md
+ * seção 9.3 pra paleta/tipografia base, compartilhada com o apps/web, mas
+ * aqui em superfícies chapadas em vez de translúcidas).
+ */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-panel: var(--panel);
+  --color-panel-inset: var(--panel-inset);
+  --color-navbar: var(--navbar);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+:root {
+  --background: #08090b;
+  --foreground: #f2f2f4;
+  --panel: #101114;
+  --panel-inset: #0d0e11;
+  --navbar: #0c0d10;
+  --muted-foreground: #8a8c99;
+  --border: rgba(255, 255, 255, 0.09);
+  --primary: #7c6cff;
+  --primary-foreground: #08090b;
+  --success: #3ecf8e;
+  --warning: #ffc857;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+}
